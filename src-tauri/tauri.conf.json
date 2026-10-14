@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CX Workspace",
+  "version": "0.9.1",
+  "identifier": "com.yio.cxworkspace",
+  "build": {
+    "beforeDevCommand": "node scripts/prepare-tauri.cjs",
+    "beforeBuildCommand": "node scripts/prepare-tauri.cjs",
+    "frontendDist": "../web-dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "CX Workspace",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 760,
+        "minHeight": 620
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; frame-src 'none'; base-uri 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg",
+      "nsis"
+    ],
+    "externalBin": [
+      "binaries/cx-node"
+    ],
+    "resources": {
+      "resources/backend.cjs": "backend.cjs"
+    },
+    "createUpdaterArtifacts": true,
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "signingIdentity": "-"
+    },
+    "windows": {
+      "nsis": {
+        "languages": [
+          "Spanish"
+        ],
+        "installMode": "currentUser"
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERBMkM4NkNCN0ZEQTA1RTcKUldUbkJkcC95NFlzMmtPMnZFR05LbDVFMUdFUEpXQ0ZpMTV4NTBWOE5sQzU4TGZUNjBqUjd1YTUK",
+      "endpoints": [
+        "https://github.com/ggarcia-create/cx-workspace/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

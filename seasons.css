@@ -1,0 +1,51 @@
+/* Retain existing independent scrolling; seasonal styling never changes layout. */
+.shell{height:100vh;min-height:0;overflow:hidden}.sidebar{height:100vh;min-height:0;overflow:hidden}.sidebar>.brand,.sidebar>.nav-label,.sidebar>.sidebar-bottom{flex-shrink:0}.sidebar-bottom{margin-top:0;position:relative;z-index:5}
+#navigation{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#526159 transparent}#navigation>.navgroup{flex-shrink:0}#navigation>.navgroup:last-child{margin-top:auto}
+.workspace{height:100vh;overflow-y:auto;overscroll-behavior:contain}.workspace>.topbar,.workspace>footer{flex-shrink:0}
+
+/* Approved reference pixels are displayed directly, not redrawn. */
+.shell[data-season=halloween]{--header-art:url('assets/seasons/topbar/halloween-rich.png')}
+.shell[data-season=muertos]{--header-art:url('assets/seasons/topbar/muertos-rich.png')}
+.shell[data-season=christmas]{--header-art:url('assets/seasons/topbar/christmas-rich.png')}
+.season-header-art{position:absolute;pointer-events:none!important;background-image:var(--header-art);background-repeat:no-repeat;background-size:1440px 960px;overflow:hidden}
+.season-header-art[data-part=main]{top:0;width:210px;height:72px;background-position:-401px 0;mask-image:linear-gradient(to right,transparent,#000 4%,#000 97%,transparent)}
+.season-header-art[data-part=left]{left:0;top:0;width:28px;height:70px;background-position:-220px 0}
+.season-header-art[data-part=right]{right:0;top:0;width:25px;height:70px;background-position:-1415px 0}
+.season-header-art[data-part=top]{left:0;right:0;top:0;height:14px;background-position:-220px 0;background-repeat:repeat-x}
+.season-header-art[data-part=bottom]{left:0;right:0;bottom:0;height:15px;background-position:-220px -66px;background-repeat:repeat-x}
+.shell[data-season=halloween] .topbar{background:#fffaf5}
+.shell[data-season=muertos] .topbar{background:#fcf8ff}
+.shell[data-season=christmas] .topbar{background:#f9fcfd}
+.shell[data-season=halloween]{--season-bg:#ffecd9;--season-ink:#a84c06;--season-icon:'🎃'}
+.shell[data-season=muertos]{--season-bg:#efe7fa;--season-ink:#7040a6;--season-icon:'✿'}
+.shell[data-season=christmas]{--season-bg:#e0f3e6;--season-ink:#2f7147;--season-icon:'🎄'}
+.shell[data-season]:not([data-season=none]) .exp-status:not(.exp-change),.shell[data-season]:not([data-season=none]) .resolution-badge,.shell[data-season]:not([data-season=none]) .tabs button.active{background:var(--season-bg);color:var(--season-ink)}
+.shell[data-season]:not([data-season=none]) .exp-status,.shell[data-season]:not([data-season=none]) .resolution-badge{position:relative}
+.shell[data-season]:not([data-season=none]) .exp-status:not(.exp-change)>svg,.shell[data-season]:not([data-season=none]) .resolution-badge>svg{visibility:hidden}
+.shell[data-season]:not([data-season=none]) .exp-status:not(.exp-change)::before,.shell[data-season]:not([data-season=none]) .resolution-badge::before{content:var(--season-icon);position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;line-height:1;pointer-events:none}
+.shell[data-season=halloween] .submenu button.active{color:#eaae72;border-left-color:#eaae72;background:#352b20}
+
+.season-header-art[data-part=main]{mask-image:linear-gradient(to right,transparent,#000 7%,#000 92%,transparent);mix-blend-mode:multiply}
+.season-header-art[data-part=pumpkin]{left:3px;top:22px;width:29px;height:30px;background-position:-241px -20px;mix-blend-mode:multiply}
+
+/* Tile only clean margins; never show fragments of the central illustration. */
+.season-header-art[data-part=top],.season-header-art[data-part=bottom]{background-image:none;display:flex;overflow:hidden}
+.season-header-art[data-part=top]>span,.season-header-art[data-part=bottom]>span{flex:0 0 200px;height:100%;background-image:var(--header-art);background-repeat:no-repeat;background-size:1440px 960px;background-position:-700px 0}
+.season-header-art[data-part=bottom]>span{background-position:-700px -66px}
+/* Keep a usable search field and room for the complete seasonal illustration. */
+.shell[data-season]:not([data-season=none]) .topbar .search-wrap{max-width:clamp(240px,30vw,560px)}
+@media(max-width:800px){.shell[data-season]:not([data-season=none]) .topbar .search-wrap{max-width:none}}
+
+/* Blend the reference backdrop rather than lay an opaque strip over its artwork. */
+.season-header-art[data-part=main]{mask-image:linear-gradient(to right,transparent,#000 8%,#000 88%,transparent);mix-blend-mode:multiply}
+.season-header-art[data-part=top]>span,.season-header-art[data-part=bottom]>span{mix-blend-mode:multiply}
+.shell[data-season=christmas] .topbar{background:linear-gradient(90deg,#f8fbfc,#fbfcfc 55%,#f8fbfc)}
+.season-header-art[data-part=main]{mask-image:linear-gradient(to right,transparent,#000 10%,#000 85%,transparent),linear-gradient(to bottom,transparent,#000 12%,#000 85%,transparent);mask-composite:intersect}
+/* Fade the decorative margin backgrounds into the header instead of forming bands. */
+.season-header-art[data-part=top]{opacity:.72;mask-image:linear-gradient(to bottom,#000,transparent)}
+.season-header-art[data-part=bottom]{opacity:.72;mask-image:linear-gradient(to top,#000,transparent)}
+.season-header-art[data-part=left]{mask-image:linear-gradient(to right,#000 45%,transparent)}
+.season-header-art[data-part=right]{mask-image:linear-gradient(to left,#000 45%,transparent)}
+.shell[data-season=halloween] .topbar{background:#fffaf5}
+.shell[data-season=muertos] .topbar{background:#fcf8ff}
+.shell[data-season=christmas] .topbar{background:#f9fcfd}

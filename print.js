@@ -1,0 +1,1 @@
+(async()=>{document.getElementById('report').innerHTML=await window.__TAURI__.core.invoke('print_content');await document.fonts.ready;await window.__TAURI__.core.invoke('print_ready');})().catch(()=>{document.getElementById('report').textContent='No se pudo preparar el informe.';});

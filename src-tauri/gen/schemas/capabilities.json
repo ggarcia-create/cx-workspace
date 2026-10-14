@@ -1,0 +1,1 @@
+{"desktop":{"identifier":"desktop","description":"Local application windows only. No shell or filesystem access from JavaScript.","local":true,"windows":["main","print"],"permissions":["core:default"]}}
