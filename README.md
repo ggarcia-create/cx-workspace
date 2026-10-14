@@ -1,6 +1,6 @@
 # CX Workspace · Tauri 0.9.1
 
-Aplicación de Customer Experience para Windows x64 y macOS Apple Silicon / Intel. Tauri administra las ventanas, diálogos y actualizaciones; un proceso Node incluido conserva el motor de negocio existente. No requiere instalar Node en los equipos de los usuarios.
+Aplicación de Customer Experience para Windows x64 y macOS 13.5 o posterior, Apple Silicon / Intel. Tauri administra las ventanas, diálogos y actualizaciones; un proceso Node incluido conserva el motor de negocio existente. No requiere instalar Node en los equipos de los usuarios.
 
 ## Compilar
 
