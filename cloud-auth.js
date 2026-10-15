@@ -17,4 +17,28 @@ function cloudSignupScreen(){cloudCard('Crear cuenta','Recibirás un código par
 function cloudVerifyScreen(email){cloudCard('Verifica tu correo','Ingresa el código que recibiste por correo electrónico.','<form id="cloud-verify-form"><label>Código de verificación<input name="code" required inputmode="numeric" pattern="[0-9]{6,8}" minlength="6" maxlength="8" autocomplete="one-time-code"></label><button class="primary-button" type="submit">Verificar correo</button></form><button id="cloud-back" class="secondary-button">Volver</button>');document.getElementById('cloud-back').onclick=cloudLoginScreen;document.getElementById('cloud-verify-form').onsubmit=async e=>{e.preventDefault();try{await cloudEnter(await desktop.cloudVerifySignup({email,code:e.target.elements.code.value}));}catch(error){cloudError(error);}};}
 function cloudResetScreen(){cloudCard('Restablecer contraseña','Solicita un código de recuperación a tu correo.','<form id="cloud-reset-form"><label>Correo electrónico<input name="email" type="email" required autocomplete="email"></label><button class="primary-button" type="submit">Enviar código</button></form><button id="cloud-back" class="secondary-button">Volver</button>');document.getElementById('cloud-back').onclick=cloudLoginScreen;document.getElementById('cloud-reset-form').onsubmit=async e=>{e.preventDefault();const email=e.target.elements.email.value;try{await desktop.cloudRequestReset({email});cloudResetVerify(email);}catch(error){cloudError(error);}};}
 function cloudResetVerify(email){cloudCard('Nueva contraseña','Si el correo tiene una cuenta, recibirás un código de recuperación.','<form id="cloud-new-password"><label>Código<input name="code" required inputmode="numeric" pattern="[0-9]{6,8}" minlength="6" maxlength="8" autocomplete="one-time-code"></label><label>Nueva contraseña<input name="password" type="password" minlength="8" maxlength="128" required autocomplete="new-password"></label><button class="primary-button" type="submit">Restablecer contraseña</button></form><button id="cloud-back" class="secondary-button">Volver</button>');document.getElementById('cloud-back').onclick=cloudLoginScreen;document.getElementById('cloud-new-password').onsubmit=async e=>{e.preventDefault();try{const data=Object.fromEntries(new FormData(e.target));await cloudEnter(await desktop.cloudVerifyReset({...data,email}));}catch(error){cloudError(error);}};}
-setInterval(async()=>{if(!cloudMode||!currentUser||authRoot.hidden!==true)return;try{const user=await desktop.cloudProfile();currentUser=user;if(user.pending||!user.active||user.role!=='admin'&&!Object.values(user.permissions||{}).some(p=>p.view)){closeGlobalSearch();records=[];openRecord=null;cloudWaiting();return;}updateProfile();if(!recordType&&!openRecord){records=await desktop.listRecords();if(['devoluciones','reparacion','calidad'].includes(current))drawRecordCards();}}catch{records=[];openRecord=null;cloudWaiting();}},30000);
+let cloudAccessReviewRunning=false;
+async function reviewCloudAccess(){
+ if(cloudAccessReviewRunning||!cloudMode||!currentUser||authRoot.hidden!==true)return;
+ cloudAccessReviewRunning=true;
+ const accountId=currentUser.id;
+ try{
+  let user;
+  try{user=await desktop.cloudProfile();}catch{return;}
+  if(!currentUser||currentUser.id!==accountId||authRoot.hidden!==true)return;
+  currentUser=user;
+  if(user.pending||!user.active||user.role!=='admin'&&!Object.values(user.permissions||{}).some(p=>p.view)){
+   closeGlobalSearch();records=[];openRecord=null;cloudWaiting();return;
+  }
+  updateProfile();
+  if(!recordType&&!openRecord){
+   try{
+    const refreshed=await desktop.listRecords();
+    if(!currentUser||currentUser.id!==accountId||authRoot.hidden!==true||recordType||openRecord)return;
+    records=refreshed;
+    if(['devoluciones','reparacion','calidad'].includes(current))drawRecordCards();
+   }catch{/* A failed refresh preserves the current workspace; server permissions still apply to every operation. */}
+  }
+ }finally{cloudAccessReviewRunning=false;}
+}
+setInterval(reviewCloudAccess,30000);

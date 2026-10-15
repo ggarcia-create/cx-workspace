@@ -1,8 +1,7 @@
-# CX Workspace 0.10.4
+# CX Workspace 0.10.5
 
-- Detección del canal comercial al escribir o pegar el número de pedido: Mercado Libre, Shopify, Coppel, Walmart y Amazon.
-- El canal se puede corregir manualmente si el pedido no coincide con la nomenclatura.
-- Cantidad inicial de 1, editable en registros individuales y masivos.
-- Las secciones completas se minimizan al avanzar y pueden abrirse nuevamente para corregir datos.
-- Área responsable al final del registro; conserva la validación obligatoria.
-- ZIP para compartir los tres instaladores con instrucciones y sumas de verificación.
+- Una falla temporal al revisar la conexión o actualizar expedientes conserva la pantalla y los datos en edición.
+- Cuenta pendiente solo aparece cuando el servidor confirma que faltan autorización o permisos.
+- Las revisiones automáticas no se superponen ni aplican respuestas de una sesión anterior.
+- Conserva la validación de permisos en cada operación y el bloqueo de cuentas revocadas.
+- Incluye instaladores de Mac y Windows y ZIP para compartir.
