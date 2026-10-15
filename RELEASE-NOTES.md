@@ -1,4 +1,4 @@
-# CX Workspace 0.10.2
+# CX Workspace 0.10.3
 
 - Informe ejecutivo sin la gráfica duplicada de componentes; conserva el desglose de problemas y fallas específicas.
 - Leyendas breves calculadas con los resultados de cada gráfica, sin texto metodológico repetitivo.
