@@ -17,5 +17,9 @@
   const specifics=normalized===reasons[0]&&component?groups(componentRows,r=>matching(r).filter(f=>key(f.component||'Sin problema reportado')===key(component)).flatMap(f=>f.specifics.length?f.specifics:['Sin falla específica'])):[];
   return {reasons:groups(rows,r=>faults(r).map(f=>f.reason)),components,specifics,selectedRows,componentRows};
  }
- const api={clean,key,reasons,reason,sale,executed,executedAmount,faults,groups,drilldown};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.claimAnalytics=api;
+ function salesForPeriod(monthlySales,from,to,channel=''){
+  const months=monthlySales.filter(m=>m.month>=from.slice(0,7)&&m.month<=to.slice(0,7));
+  return {total:months.reduce((sum,m)=>sum+(channel?Number(m.totals?.[channel]||0):Object.values(m.totals||{}).reduce((s,n)=>s+Number(n||0),0)),0),available:months.length>0};
+ }
+ const api={salesForPeriod,clean,key,reasons,reason,sale,executed,executedAmount,faults,groups,drilldown};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.claimAnalytics=api;
 })(globalThis);
