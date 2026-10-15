@@ -200,24 +200,34 @@ async fn install(app: AppHandle) -> Result<Value, String> {
         return Err("No hay una actualización lista.".into());
     };
     status(&app, "installing", "Instalando actualización…");
+    // macOS can replace the bundle while its sidecar is running. Keep it alive
+    // on failure so the user can continue working and retry the downloaded update.
+    #[cfg(windows)]
     {
         let mut backend = s.backend.lock().map_err(|_| "Servicio no disponible")?;
         let _ = backend.child.kill();
         let _ = backend.child.wait();
     }
+    let installer = update.clone();
     let outcome = tauri::async_runtime::spawn_blocking(move || {
-        update.install(bytes).map_err(|e| e.to_string())
+        let result = installer.install(&bytes).map_err(|e| e.to_string());
+        (result, bytes)
     })
-    .await
-    .map_err(|e| e.to_string())?;
-    if outcome.is_err() {
+    .await;
+    let (result, bytes) = match outcome {
+        Ok(value) => value,
+        Err(error) => (Err(error.to_string()), Vec::new()),
+    };
+    if let Err(error) = result {
+        if !bytes.is_empty() {
+            *s.pending.lock().unwrap() = Some((update, bytes));
+        }
         s.installing.store(false, Ordering::SeqCst);
-        status(
-            &app,
-            "error",
-            "No se pudo instalar. Reinicia CX Workspace y vuelve a intentarlo.",
+        status(&app, "error", &format!("No se pudo instalar la actualización: {error}. Puedes volver a intentarlo o descargar el instalador."));
+        return Err(
+            "No se pudo instalar la actualización. Consulta Actualizaciones para ver el motivo."
+                .into(),
         );
-        return Err("No se pudo instalar la actualización.".into());
     }
     app.restart();
 }
@@ -331,13 +341,52 @@ fn main() {
    let handle=app.handle().clone();tauri::async_runtime::spawn(async move{tokio::time::sleep(Duration::from_secs(15)).await;loop{let _=check(handle.clone()).await;tokio::time::sleep(Duration::from_secs(21600)).await;}});
    Ok(())
   })
-  .on_window_event(|window,event|{if window.label()=="main"{if let tauri::WindowEvent::CloseRequested{api,..}=event{let app=window.app_handle();if app.state::<State>().pending.lock().unwrap().is_some(){api.prevent_close();let handle=app.clone();tauri::async_runtime::spawn(async move{let _=install(handle).await;});}}}})
+  .on_window_event(|window,event|{if window.label()=="main"{if let tauri::WindowEvent::CloseRequested{api,..}=event{let app=window.app_handle();if app.state::<State>().installing.load(Ordering::SeqCst){api.prevent_close();return;}if app.state::<State>().pending.lock().unwrap().is_some(){api.prevent_close();let handle=app.clone();tauri::async_runtime::spawn(async move{let _=install(handle).await;});}}}})
   .invoke_handler(tauri::generate_handler![cx_call,print_content,print_ready]).build(tauri::generate_context!()).expect("No se pudo iniciar CX Workspace");
     app.run(|app, event| {
+        if let tauri::RunEvent::ExitRequested { code, api, .. } = &event {
+            let state = app.state::<State>();
+            if intercept_update_exit(
+                *code,
+                state.pending.lock().unwrap().is_some(),
+                state.installing.load(Ordering::SeqCst),
+            ) {
+                api.prevent_exit();
+                let handle = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = install(handle).await;
+                });
+            } else if state.installing.load(Ordering::SeqCst)
+                && *code != Some(tauri::RESTART_EXIT_CODE)
+            {
+                api.prevent_exit();
+            }
+        }
         if let tauri::RunEvent::Exit = event {
             if let Ok(mut backend) = app.state::<State>().backend.try_lock() {
                 let _ = backend.child.kill();
             }
         }
     });
+}
+
+fn intercept_update_exit(code: Option<i32>, pending: bool, installing: bool) -> bool {
+    pending && !installing && code != Some(tauri::RESTART_EXIT_CODE)
+}
+
+#[cfg(test)]
+mod updater_tests {
+    use super::*;
+    #[test]
+    fn quit_installs_pending_update_but_restart_is_allowed() {
+        assert!(intercept_update_exit(None, true, false)); // macOS Quit / Cmd+Q
+        assert!(intercept_update_exit(Some(0), true, false));
+        assert!(!intercept_update_exit(None, false, false));
+        assert!(!intercept_update_exit(None, true, true));
+        assert!(!intercept_update_exit(
+            Some(tauri::RESTART_EXIT_CODE),
+            true,
+            false
+        ));
+    }
 }

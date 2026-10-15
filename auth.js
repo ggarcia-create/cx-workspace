@@ -42,5 +42,26 @@ function userEditor(user){
 }
 const profileButton=document.getElementById('profile-button');
 const accountMenu=document.createElement('div');accountMenu.id='account-menu';accountMenu.className='popover account-menu';accountMenu.hidden=true;document.querySelector('.topbar').append(accountMenu);
-profileButton.addEventListener('click',()=>{accountMenu.innerHTML=`${isAdmin()?'<button id="manage-users">Usuarios y permisos</button>':''}<button id="change-own-password">Cambiar contraseña</button>${cloudMode&&isAdmin()?'<button id="import-local-data">Importar expedientes locales</button>':''}<button id="check-app-updates">Buscar actualizaciones</button><button id="logout">Cerrar sesión</button>`;accountMenu.hidden=!accountMenu.hidden;accountMenu.querySelector('#manage-users')?.addEventListener('click',()=>{accountMenu.hidden=true;navigate('configuracion',1);});accountMenu.querySelector('#change-own-password').addEventListener('click',()=>{accountMenu.hidden=true;loginScreen(false,true);});accountMenu.querySelector('#logout').addEventListener('click',logout);accountMenu.querySelector('#import-local-data')?.addEventListener('click',cloudImportDialog);accountMenu.querySelector('#check-app-updates').onclick=async()=>{try{const status=await desktop.checkUpdates();const dialog=document.createElement('dialog');dialog.innerHTML='<h2>Actualizaciones</h2><p></p><button class="secondary-button">Cerrar</button>';dialog.querySelector('p').textContent=status.message;dialog.querySelector('button').onclick=()=>dialog.close();dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);dialog.showModal();}catch(e){accountMenu.textContent=authError(e);}};});
+profileButton.addEventListener('click',()=>{accountMenu.innerHTML=`${isAdmin()?'<button id="manage-users">Usuarios y permisos</button>':''}<button id="change-own-password">Cambiar contraseña</button>${cloudMode&&isAdmin()?'<button id="import-local-data">Importar expedientes locales</button>':''}<button id="check-app-updates">Buscar actualizaciones</button><button id="logout">Cerrar sesión</button>`;accountMenu.hidden=!accountMenu.hidden;accountMenu.querySelector('#manage-users')?.addEventListener('click',()=>{accountMenu.hidden=true;navigate('configuracion',1);});accountMenu.querySelector('#change-own-password').addEventListener('click',()=>{accountMenu.hidden=true;loginScreen(false,true);});accountMenu.querySelector('#logout').addEventListener('click',logout);accountMenu.querySelector('#import-local-data')?.addEventListener('click',cloudImportDialog);accountMenu.querySelector('#check-app-updates').onclick=showAppUpdates;});
 document.addEventListener('click',e=>{if(!e.target.closest('#account-menu')&&!e.target.closest('#profile-button'))accountMenu.hidden=true;});
+
+async function showAppUpdates(){
+ accountMenu.hidden=true;
+ const dialog=document.createElement('dialog');
+ dialog.innerHTML='<h2>Actualizaciones</h2><small class="update-version"></small><p role="status" aria-live="polite">Buscando actualizaciones…</p><div class="form-actions"><button class="secondary-button" data-close>Cerrar</button><button class="primary-button" data-install hidden>Instalar y reiniciar</button></div>';
+ const installButton=dialog.querySelector('[data-install]');
+ let timer,ready=false;
+ const render=status=>{
+  if(status.state==='ready')ready=true;
+  dialog.querySelector('.update-version').textContent='Versión instalada: '+(status.version||'—');
+  dialog.querySelector('p').textContent=status.message;
+  installButton.hidden=!(status.state==='ready'||status.state==='error'&&ready);
+  installButton.disabled=status.state==='installing';
+ };
+ dialog.querySelector('[data-close]').onclick=()=>dialog.close();
+ dialog.addEventListener('close',()=>{clearInterval(timer);dialog.remove();});
+ installButton.onclick=async()=>{installButton.disabled=true;try{render({state:'installing',message:'Instalando. La aplicación se reiniciará…'});await desktop.installUpdate();}catch(e){render(await desktop.updateStatus());installButton.disabled=false;}};
+ document.body.append(dialog);dialog.showModal();
+ timer=setInterval(async()=>{try{render(await desktop.updateStatus());}catch(e){dialog.querySelector('p').textContent=authError(e);}},750);
+ try{render(await desktop.checkUpdates());}catch(e){dialog.querySelector('p').textContent=authError(e);}
+}
