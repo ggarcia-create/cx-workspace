@@ -1,8 +1,7 @@
-# CX Workspace 0.10.1
+# CX Workspace 0.10.2
 
-- Dashboard abre con los reclamos del mes en curso y calcula ventas y porcentajes con las ventas de ese mes.
-- Al aplicar un rango, usa los totales completos de los meses comprendidos y respeta el canal seleccionado.
-- Los reportes PDF y por correo usan la misma base de ventas mensual del periodo.
-- Campos desplegables y botones con altura, tipografía y foco uniformes.
-
-Para rangos parciales se usa el total completo del mes, según la configuración acordada.
+- Informe ejecutivo sin la gráfica duplicada de componentes; conserva el desglose de problemas y fallas específicas.
+- Leyendas breves calculadas con los resultados de cada gráfica, sin texto metodológico repetitivo.
+- Motivo principal por expediente en el resumen; los importes y KPI cuentan cada expediente una sola vez.
+- Resumen de expedientes únicos, expedientes con varias fallas y fallas distintas. Cada falla repetida en el mismo expediente cuenta una vez.
+- Mismo contenido en la vista previa, PDF descargado y PDF enviado por correo.
