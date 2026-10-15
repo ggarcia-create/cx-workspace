@@ -290,21 +290,40 @@ async fn cx_call(
         .map_err(|e| e.to_string())?;
     }
     if method == "exportReturnPDF" {
-        *app.state::<State>().report.lock().unwrap() =
-            result.as_str().ok_or("Reporte inválido")?.to_string();
-        if let Some(previous) = app.get_webview_window("print") {
-            previous.close().map_err(|e| e.to_string())?;
-        }
-        tauri::WebviewWindowBuilder::new(
-            &app,
-            "print",
-            tauri::WebviewUrl::App("print.html".into()),
-        )
-        .title("Informe de reclamos · Guardar como PDF")
-        .inner_size(1000., 800.)
-        .build()
+        let bytes: Vec<u8> = result["bytes"]
+            .as_array()
+            .ok_or("PDF inválido")?
+            .iter()
+            .map(|n| {
+                n.as_u64()
+                    .filter(|v| *v <= 255)
+                    .map(|v| v as u8)
+                    .ok_or("PDF inválido")
+            })
+            .collect::<Result<_, _>>()?;
+        let filename = result["filename"]
+            .as_str()
+            .unwrap_or("Reporte-devoluciones.pdf")
+            .to_string();
+        let handle = app.clone();
+        return tauri::async_runtime::spawn_blocking(move || {
+            let selected = handle
+                .dialog()
+                .file()
+                .set_title("Guardar reporte PDF")
+                .set_file_name(filename)
+                .add_filter("PDF", &["pdf"])
+                .blocking_save_file();
+            if let Some(file) = selected {
+                std::fs::write(file.into_path().map_err(|e| e.to_string())?, bytes)
+                    .map_err(|e| e.to_string())?;
+                Ok(json!({"saved":true}))
+            } else {
+                Ok(json!({"saved":false}))
+            }
+        })
+        .await
         .map_err(|e| e.to_string())?;
-        return Ok(json!({"saved":false,"printDialog":true}));
     }
     Ok(result)
 }

@@ -18,6 +18,7 @@ async function load(cloudMode){
   assert.match((await local.call('listRecords')).error,/sesión/);
   assert.equal((await local.call('setup',{username:'admin',name:'Admin',password:'Safe-test-123'})).result.role,'admin');
   assert.deepEqual((await local.call('listRecords')).result,[]);
+  const pdf=(await local.call('exportReturnPDF',{from:'2026-10-01',to:'2026-10-15',mode:'general'})).result;assert.equal(Buffer.from(pdf.bytes).subarray(0,5).toString(),'%PDF-');assert.match(pdf.filename,/General.*\.pdf$/);
   assert.equal((await local.call('logout')).result,true);
   assert.match((await local.call('listRecords')).error,/sesión/);
   assert.ok(fs.existsSync(path.join(local.directory,'cx-data-v1.json')));

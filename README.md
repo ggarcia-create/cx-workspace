@@ -1,4 +1,4 @@
-# CX Workspace · Tauri 0.9.2
+# CX Workspace · Tauri 0.10.0
 
 Aplicación de Customer Experience para Windows x64 y macOS 13.5 o posterior, Apple Silicon / Intel. Tauri administra las ventanas, diálogos y actualizaciones; un proceso Node incluido conserva el motor de negocio existente. No requiere instalar Node en los equipos de los usuarios.
 
@@ -20,7 +20,13 @@ GitHub necesita `TAURI_SIGNING_PRIVATE_KEY`. La clave pública está en tauri.co
 
 Se comprueba al iniciar y cada seis horas, se descarga automáticamente, se verifica la firma y se instala al cerrar o mediante el botón de actualizar. La migración inicial desde Electron se instala manualmente.
 
-Los informes PDF mantienen el HTML y CSS originales y abren el diálogo nativo de impresión para guardar como PDF. CSV sigue usando Guardar archivo.
+Los informes generales o por área se generan como PDF directamente y se guardan con el diálogo nativo. El mismo motor genera los adjuntos enviados desde el servidor. CSV respeta el periodo y área seleccionados. Ver supabase/CONFIGURACION.md para configurar el remitente SMTP de reportes.
+
+## Flujo y análisis
+
+Los cambios nuevos esperan en Devoluciones en proceso la confirmación de recepción y cambio efectuado. Después comparten Expedientes · Devoluciones en Reparación y Calidad. La versión de esquema de navegación es 2; al cargar se agrupan los cambios antiguos y se reubica el índice de servicios, conservando historial y tipo. Los clientes anteriores reciben índices de navegación compatibles hasta actualizarse.
+
+El dashboard enlaza motivo, problema/componente y falla específica. Los pasteles usan porcentajes de menciones para que sumen 100 %; cada detalle muestra además el porcentaje de expedientes del grupo y su importe. Las fallas adicionales se incluyen sin duplicar un expediente dentro del mismo problema. Los reportes incluyen los cuatro KPI y conservan la base global de ventas de todos los meses.
 
 ## Catálogo unificado y área responsable
 

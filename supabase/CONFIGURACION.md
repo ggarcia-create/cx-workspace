@@ -20,3 +20,10 @@ Los tags `v<versión>` generan un borrador de release con Mac Apple Silicon e In
 Las actualizaciones usan la clave privada de Tauri guardada como secreto TAURI_SIGNING_PRIVATE_KEY en GitHub. Mac usa firma ad hoc con permiso JIT para Node, sin notarización de Apple. Mac y Windows pueden mostrar avisos de editor no verificado al instalar; no describir los instaladores como notarizados o firmados por Apple.
 
 La app consulta GitHub al abrir y cada seis horas, descarga la actualización y la instala al cerrar. Cambiar archivos no publica una actualización: incrementar versión, generar tag, revisar y publicar el release.
+
+
+## Reportes por correo (0.10.0)
+
+En Edge Functions → Secrets, el administrador debe guardar `REPORT_SMTP_USER` (correo remitente) y `REPORT_SMTP_PASSWORD` (contraseña de aplicación de Gmail). El host predeterminado es `smtp.gmail.com` y se usa TLS en el puerto 465. Si se requiere otro host, configurarlo con `REPORT_SMTP_HOST`; debe admitir TLS directo en 465. No se reutiliza ni se expone la contraseña de los correos de autenticación.
+
+El envío requiere usuario aprobado, activo y permiso de edición de Dashboard. El servidor obtiene los expedientes autorizados y genera el PDF; el cliente solo envía periodo, área y destinatarios. No acepta archivos, asuntos, remitentes ni servidores arbitrarios desde el cliente. Cada solicitud usa un identificador único reservado antes del envío para evitar duplicados. Un estado incierto exige revisar el correo antes de iniciar otro envío. Los destinatarios van en copia oculta, con un máximo de 20 y cinco solicitudes cada diez minutos por usuario. El estado «aceptado» confirma la recepción SMTP, no la entrega a la bandeja.

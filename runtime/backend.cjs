@@ -4,6 +4,7 @@ const {createStore}=require('../store.cjs');
 const {createCloudClient}=require('../cloud-client.cjs');
 const config=require('../cloud-config.json');
 const report=require('../report-builder.js');
+const {createReportPDF}=require('../report-pdf.cjs');
 const methods=new Set(['faultReportData','dashboardData','listMonthlySales','saveMonthlySales','status','setup','login','logout','changePassword','listRecords','saveRecord','saveRecords','deleteRecord','saveRepair','listTechnicians','listNotifications','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','migrateRecords','listUsers','saveUser']);
 const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');
 console.log=(...args)=>console.error(...args);
@@ -21,11 +22,12 @@ const invoke=async(method,input)=>{
 const cloudMethods={cloudResume:'resume',cloudGoogle:'google',cloudSendSignup:'sendSignup',cloudVerifySignup:'verifySignup',cloudRequestReset:'requestReset',cloudVerifyReset:'verifyReset',cloudProfile:'profile'};
 async function dispatch(method,input){
  if(methods.has(method))return invoke(method,input);
+ if(['reportMailStatus','sendFaultReport'].includes(method)){if(!cloud)throw Error('El envío de reportes requiere el espacio compartido.');return cloud.call(method,input);}
  if(Object.hasOwn(cloudMethods,method)){if(!cloud)throw Error('Acceso compartido no configurado.');return cloud[cloudMethods[method]](input);}
  if(method==='cloudImportLocal'){
   if(!cloud)throw Error('Acceso compartido no configurado.');const p=await cloud.profile();if(p.role!=='admin'||!p.active||p.pending)throw Error('Solo el administrador puede importar los datos.');
   const file=path.join(directory,'cx-data-v1.json');if(!fs.existsSync(file))throw Error('No hay expedientes locales que importar.');
-  const data=JSON.parse(fs.readFileSync(file,'utf8'));return cloud.call('importLocalData',{records:data.records,monthlySales:data.monthlySales||[]});
+  const data=JSON.parse(fs.readFileSync(file,'utf8'));return cloud.call('importLocalData',{records:data.records,monthlySales:data.monthlySales||[],workflowVersion:data.workflowVersion||1});
  }
  if(method==='openProductLink'){
   const record=(await invoke('listRecords')).find(r=>r.id===input);if(!record?.productUrl)throw Error('No se encontró el enlace del producto.');
@@ -39,8 +41,8 @@ async function dispatch(method,input){
   return '\uFEFF'+lines.map(row=>row.map(quote).join(',')).join('\r\n');
  }
  if(method==='exportReturnPDF'){
-  const analysis=report.analyze(await invoke('faultReportData',input),input,(await invoke('dashboardData')).monthlySales);
-  return report.render(analysis);
+  const analyses=report.pages(await invoke('faultReportData',input),input,(await invoke('dashboardData')).monthlySales);
+  return {bytes:Array.from(await createReportPDF(analyses)),filename:report.filename(input)};
  }
  throw Error('Operación no permitida.');
 }

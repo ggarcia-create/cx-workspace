@@ -22,3 +22,6 @@ src-tauri/resources/
 release-files/
 
 .qa-preview.html
+
+tmp/
+output/
