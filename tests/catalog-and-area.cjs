@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const catalog=require('../claim-components.js'),{createStore}=require('../store.cjs'),report=require('../report-builder.js');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cx-catalog-'));
+try{const store=createStore(dir);store.setup({username:'admin',name:'Admin',password:'Only-test-123'});
+ const base={type:0,date:'2026-08-01',order:'TEST',product:'Dell Latitude 5420',quantity:1,price:10000,contact:'Shopify',reason:catalog.unifiedReason,component:'Batería',specificReasons:['Hinchada','No retiene carga','No funciona sin cargador'],customerReason:'Descripción del cliente'};
+ for(const date of ['2026-08-01','2026-09-01','2026-10-01'])assert.throws(()=>store.saveRecord({...base,date}),/obligatorios/);
+ store.saveRecord({...base,responsibleArea:'Cliente'});
+ assert.equal(store.listRecords()[0].specificReasons.length,3);
+ store.saveRecord({...base,order:'BIOS',component:'BIOS y firmware',specificReasons:['BIOS bloqueado con contraseña'],responsibleArea:'Acondicionamiento'});
+ assert.throws(()=>store.saveRecord({...base,component:'Inventado',specificReasons:['Otro'],responsibleArea:'Cliente'}),/falla específica/);
+ assert.equal(catalog.reportedCategories().includes('Bisagras y estructura'),false);
+ assert.ok(catalog.reportedSpecifics('Estética / estado físico').includes('Bisagra rota'));
+ assert.ok(catalog.reportedSpecifics('Acceso a Windows y cuentas').includes('Contraseña de Windows caducada'));
+ assert.equal(catalog.reportedSpecifics('Acceso a Windows y cuentas').includes('BIOS bloqueado con contraseña'),false);
+ assert.deepEqual(catalog.reportedSpecifics('Inventado'),[]);
+ assert.equal(catalog.normalizeReason('El producto llegó dañado'),catalog.normalizeReason('El producto no funciona'));
+ const rows=store.listRecords().map((r,i)=>({...r,reason:i?'El producto llegó dañado':'El producto no funciona'}));
+ const analysis=report.analyze(rows,{from:'2026-01-01',to:'2026-12-31'});assert.equal(analysis.reasons.length,1);assert.equal(analysis.reasons[0].count,2);
+ console.log('Unified catalog, multiple symptoms, BIOS separation, aesthetics, historical grouping and all-date area validation passed.');
+}finally{fs.rmSync(dir,{recursive:true,force:true});}

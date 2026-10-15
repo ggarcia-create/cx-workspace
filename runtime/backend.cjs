@@ -9,14 +9,16 @@ const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');
 console.log=(...args)=>console.error(...args);
 const directory=process.argv[2];if(!directory)throw Error('Missing application data directory');
 fs.mkdirSync(directory,{recursive:true});
-// Tokens stay in process memory. No plaintext credentials are written to disk.
-const cloud=config.enabled?createCloudClient(config,directory,{safeStorage:{isEncryptionAvailable:()=>false},shell:{openExternal:async url=>emit({event:'open-url',url})}}):null;
+// Credential keys travel only over the private parent/child pipe, never to the webview.
+let vaultSequence=0;const vaultPending=new Map();
+const vault=(action,value)=>new Promise((resolve,reject)=>{const id=++vaultSequence;vaultPending.set(id,{resolve,reject});emit({event:'secure-vault',vaultId:id,action,value});});
+const cloud=config.enabled?createCloudClient(config,directory,{vault,shell:{openExternal:async url=>emit({event:'open-url',url})}}):null;
 const local=cloud?null:createStore(directory);
 const invoke=async(method,input)=>{
  if(cloud){if(['status','login','logout','changePassword'].includes(method))return cloud[method](input);if(method==='migrateRecords')return cloud.call('listRecords');if(method==='setup')throw Error('Las cuentas se administran en el espacio compartido.');return cloud.call(method,input);}
  return local[method](input);
 };
-const cloudMethods={cloudGoogle:'google',cloudSendSignup:'sendSignup',cloudVerifySignup:'verifySignup',cloudRequestReset:'requestReset',cloudVerifyReset:'verifyReset',cloudProfile:'profile'};
+const cloudMethods={cloudResume:'resume',cloudGoogle:'google',cloudSendSignup:'sendSignup',cloudVerifySignup:'verifySignup',cloudRequestReset:'requestReset',cloudVerifyReset:'verifyReset',cloudProfile:'profile'};
 async function dispatch(method,input){
  if(methods.has(method))return invoke(method,input);
  if(Object.hasOwn(cloudMethods,method)){if(!cloud)throw Error('Acceso compartido no configurado.');return cloud[cloudMethods[method]](input);}
@@ -45,5 +47,7 @@ async function dispatch(method,input){
 // A serial queue protects local writes, session changes and one-shot migrations.
 let queue=Promise.resolve();
 readline.createInterface({input:process.stdin,crlfDelay:Infinity}).on('line',line=>{
+ let vaultReply;try{vaultReply=JSON.parse(line);}catch{}
+ if(vaultReply?.event==='secure-vault-result'){const pending=vaultPending.get(vaultReply.vaultId);if(pending){vaultPending.delete(vaultReply.vaultId);if(vaultReply.error)pending.reject(Error('No se pudo acceder al almacenamiento seguro del sistema.'));else pending.resolve(vaultReply.result);}return;}
  queue=queue.then(async()=>{let message;try{message=JSON.parse(line);if(!Number.isSafeInteger(message.id))throw Error('Solicitud inválida.');const result=await dispatch(message.method,message.input);emit({id:message.id,result:result??null});}catch(e){emit({id:message?.id,error:e.message||'No se pudo completar la operación.'});}});
 }).on('close',()=>process.exit(0));

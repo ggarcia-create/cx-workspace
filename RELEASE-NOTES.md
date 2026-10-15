@@ -1,13 +1,10 @@
-CX Workspace 0.9.1 cambia a Tauri para distribuir instaladores de Windows y Mac y recibir actualizaciones firmadas desde GitHub.
+CX Workspace 0.9.2 · Catálogo y acceso recordado
 
-- Inicio con Google y acceso al espacio compartido de Supabase. Las cuentas nuevas requieren aprobación del administrador.
-- Conserva el motor de expedientes, reparación, calidad, ventas, reportes y permisos.
-- Busca actualizaciones al abrir y cada seis horas. Descarga y verifica la firma; aplica al cerrar o desde Actualizaciones.
-- Instaladores para Mac Apple Silicon, Mac Intel y Windows x64.
-- Los datos locales de Electron se conservan en su carpeta original. Un administrador puede importarlos una vez desde la cuenta al espacio compartido vacío.
-- Las sesiones de Google permanecen en memoria y se cierran al salir; no se guardan tokens sin cifrar.
-- Los informes PDF usan la ventana de impresión del sistema: elegir Guardar como PDF.
+- Unifica los motivos funcionales y de daño en «Producto no funciona o presenta daños», con un catálogo amplio de síntomas y selección múltiple.
+- Incluye batería hinchada, sin retención de carga, uso solo con cargador, contraseña de Windows caducada y BIOS bloqueado. Las bisagras y la estructura están dentro de Estética / estado físico.
+- Conserva los motivos originales de los expedientes históricos y los agrupa en las estadísticas.
+- Área responsable obligatoria al guardar registros de cualquier fecha, tanto individuales como masivos. Los expedientes existentes no reciben áreas inventadas.
+- Opción «Recordar sesión en este equipo»: acceso cifrado, clave protegida por el sistema operativo, sin contraseñas en archivos. Al volver a abrir se puede pulsar Iniciar sesión sin escribir credenciales. Cerrar sesión elimina el acceso guardado de ese equipo.
+- Se vuelven a verificar la sesión y los permisos con Supabase; recordar el acceso no aprueba cuentas pendientes.
 
-Primera instalación: sustituir manualmente la aplicación anterior por este instalador. Las actualizaciones posteriores utilizarán Tauri. Mac usa firma ad hoc, sin notarización de Apple; pueden aparecer avisos del sistema al instalar.
-
-Borrador para validar Google con una cuenta autorizada y revisar los instaladores antes de marcar esta versión como pública.
+Mac 13.5 o posterior; instaladores separados para Apple Silicon e Intel. Windows x64. Mac sigue sin notarización de Apple. Los paquetes del actualizador conservan su firma Tauri.

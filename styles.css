@@ -43,3 +43,5 @@ main{max-width:none;margin:0;padding:26px 30px 32px}.breadcrumb{margin-bottom:16
 #received-outcome-field{display:grid;gap:8px;margin:16px 0;font-size:12px;max-width:420px}#received-outcome-field select,[data-batch-outcome]{font:inherit;border:1px solid #d8e2dc;background:#fff;color:#344e3e;border-radius:8px;padding:10px;max-width:100%}
 
 .cloud-auth-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}#cloud-google{width:100%;justify-content:center;margin:18px 0}#cloud-error{color:#a53c38;padding-top:12px}
+
+.login-card .remember-session{display:flex;align-items:center;gap:8px;margin:16px 0}.login-card .remember-session input{width:auto}.login-card #cloud-resume{width:100%;margin:12px 0;overflow-wrap:anywhere}

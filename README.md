@@ -1,4 +1,4 @@
-# CX Workspace · Tauri 0.9.1
+# CX Workspace · Tauri 0.9.2
 
 Aplicación de Customer Experience para Windows x64 y macOS 13.5 o posterior, Apple Silicon / Intel. Tauri administra las ventanas, diálogos y actualizaciones; un proceso Node incluido conserva el motor de negocio existente. No requiere instalar Node en los equipos de los usuarios.
 
@@ -8,7 +8,7 @@ Requiere Node 24, pnpm 10, Rust y las herramientas de compilación de Tauri para
 
 ## Acceso y datos
 
-Google y correo utilizan Supabase (`xngzkjvddpgkrmkjovpf`), validando el usuario y sus permisos en `cx-api`. Las cuentas nuevas esperan aprobación. La sesión se mantiene en memoria, sin tokens en texto plano en disco. Permitir `http://127.0.0.1:*/callback` en Supabase para completar Google mediante PKCE. La autenticación final debe probarse interactivamente con una cuenta autorizada.
+Google y correo utilizan Supabase (`xngzkjvddpgkrmkjovpf`), validando el usuario y sus permisos en `cx-api`. Las cuentas nuevas esperan aprobación. «Recordar sesión en este equipo» conserva el acceso cifrado con AES-256-GCM; la clave se protege en el llavero de macOS o el administrador de credenciales de Windows. No se guardan contraseñas. Cerrar sesión elimina el acceso guardado de este equipo. Permitir `http://127.0.0.1:*/callback` en Supabase para completar Google mediante PKCE. La autenticación final debe probarse interactivamente con una cuenta autorizada.
 
 La carpeta de datos sigue siendo `Application Support/cx-workspace` en Mac y `%APPDATA%/cx-workspace` en Windows. La importación explícita solo transmite expedientes y ventas; no contraseñas. No usar simultáneamente Electron y Tauri para editar la misma base local.
 
@@ -21,3 +21,7 @@ GitHub necesita `TAURI_SIGNING_PRIVATE_KEY`. La clave pública está en tauri.co
 Se comprueba al iniciar y cada seis horas, se descarga automáticamente, se verifica la firma y se instala al cerrar o mediante el botón de actualizar. La migración inicial desde Electron se instala manualmente.
 
 Los informes PDF mantienen el HTML y CSS originales y abren el diálogo nativo de impresión para guardar como PDF. CSV sigue usando Guardar archivo.
+
+## Catálogo unificado y área responsable
+
+Los registros nuevos usan «Producto no funciona o presenta daños», con selección múltiple de síntomas. BIOS y acceso a Windows son categorías separadas; bisagras y estructura se incluyen en Estética / estado físico. Los motivos anteriores se conservan y agrupan juntos en filtros y análisis. El área responsable es obligatoria al crear o editar registros de cualquier fecha; no se inventa un área para expedientes históricos.

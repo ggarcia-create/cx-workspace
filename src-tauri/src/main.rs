@@ -43,6 +43,51 @@ impl Backend {
             }
             let reply: Value =
                 serde_json::from_str(&line).map_err(|_| "Respuesta local inválida.")?;
+            if reply["event"] == "secure-vault" {
+                let result: Result<Value, String> = (|| {
+                    let entry =
+                        keyring::Entry::new("com.yio.cxworkspace.session.v1", "session-key")
+                            .map_err(|_| "Almacenamiento seguro no disponible".to_string())?;
+                    match reply["action"].as_str() {
+                        Some("get") => match entry.get_password() {
+                            Ok(value) => Ok(json!(value)),
+                            Err(keyring::Error::NoEntry) => Ok(Value::Null),
+                            Err(_) => Err("No se pudo leer el acceso guardado".into()),
+                        },
+                        Some("set") => {
+                            let value = reply["value"]
+                                .as_str()
+                                .filter(|s| {
+                                    s.len() == 64 && s.bytes().all(|c| c.is_ascii_hexdigit())
+                                })
+                                .ok_or("Clave inválida")?;
+                            entry
+                                .set_password(value)
+                                .map_err(|_| "No se pudo guardar el acceso".to_string())?;
+                            Ok(Value::Bool(true))
+                        }
+                        Some("delete") => {
+                            match entry.delete_credential() {
+                                Ok(()) | Err(keyring::Error::NoEntry) => {}
+                                Err(_) => return Err("No se pudo olvidar el acceso".into()),
+                            }
+                            Ok(Value::Bool(true))
+                        }
+                        _ => Err("Operación segura inválida".into()),
+                    }
+                })();
+                let response = match result {
+                    Ok(value) => {
+                        json!({"event":"secure-vault-result","vaultId":reply["vaultId"],"result":value})
+                    }
+                    Err(_) => {
+                        json!({"event":"secure-vault-result","vaultId":reply["vaultId"],"error":true})
+                    }
+                };
+                writeln!(self.input, "{}", response).map_err(|_| "Servicio no disponible")?;
+                self.input.flush().map_err(|_| "Servicio no disponible")?;
+                continue;
+            }
             if reply["event"] == "open-url" {
                 let url = reply["url"].as_str().ok_or("Enlace inválido")?;
                 let parsed = tauri::Url::parse(url).map_err(|_| "Enlace inválido")?;

@@ -5,8 +5,8 @@ async function load(cloudMode){
  const mockCloud={status:async()=>({cloud:true,setupRequired:false}),profile:async()=>({role:'admin',active:true,pending:false}),google:async()=>({role:'agent',pending:true}),call:async(method,payload)=>{calls.push({method,payload});if(method==='faultReportData')return [{expedientNumber:1,product:'=HYPERLINK("x")',additionalFaults:[]}];return [];}};
  const realRequire=require('node:module').createRequire(path.join(root,'runtime/backend.cjs'));
  vm.runInNewContext(fs.readFileSync(path.join(root,'runtime/backend.cjs'),'utf8'),{
-  require(name){if(name==='../cloud-config.json')return {enabled:cloudMode};if(name==='../cloud-client.cjs')return {createCloudClient:()=>mockCloud};if(name==='node:readline')return {createInterface:()=>input};if(name==='../report.css')return '';return realRequire(name);},
-  process:{argv:['node','backend',directory],stdout:{write:s=>responses.push(JSON.parse(s))},exit:()=>{}},console,URL,structuredClone,Buffer,setTimeout
+  require(name){if(name==='../cloud-config.json')return {enabled:cloudMode};if(name==='../cloud-client.cjs')return {createCloudClient:(_,__,platform)=>{mockCloud.resume=async()=>({role:'admin',active:true,pending:false});mockCloud.google=async()=>{await platform.vault('get');return {role:'agent',pending:true};};return mockCloud;}};if(name==='node:readline')return {createInterface:()=>input};if(name==='../report.css')return '';return realRequire(name);},
+  process:{argv:['node','backend',directory],stdout:{write:s=>{const reply=JSON.parse(s);if(reply.event==='secure-vault')input.emit('line',JSON.stringify({event:'secure-vault-result',vaultId:reply.vaultId,result:null}));else responses.push(reply);}},exit:()=>{}},console,URL,structuredClone,Buffer,setTimeout
  });
  let id=0;async function call(method,payload){const n=++id;input.emit('line',JSON.stringify({id:n,method,input:payload}));for(let i=0;i<100;i++){const reply=responses.find(r=>r.id===n);if(reply)return reply;await new Promise(r=>setTimeout(r,10));}throw Error('RPC timeout');}
  return {directory,call,calls,cleanup:()=>fs.rmSync(directory,{recursive:true,force:true})};
@@ -24,7 +24,7 @@ async function load(cloudMode){
  }finally{local.cleanup();}
  const cloud=await load(true);try{
   assert.equal((await cloud.call('status')).result.cloud,true);
-  assert.equal((await cloud.call('cloudGoogle')).result.pending,true);
+  assert.equal((await cloud.call('cloudGoogle')).result.pending,true);assert.equal((await cloud.call('cloudResume')).result.role,'admin');
   const csv=(await cloud.call('exportFaultReport',{})).result;assert.ok(csv.includes("'=HYPERLINK"),'CSV formula injection neutralized');
   assert.match((await cloud.call('cloudImportLocal')).error,/No hay expedientes/);
   await cloud.call('deleteRecord','case-id');assert.equal(cloud.calls.at(-1).method,'deleteRecord');
