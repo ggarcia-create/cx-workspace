@@ -1,0 +1,3 @@
+const assert=require('node:assert/strict'),{detectChannel}=require('../registration.js');
+for(const [order,channel] of [['2000021234567890','Mercado Libre'],[' ec1234 ','Shopify'],['311951434-A','Coppel'],['12-A','Coppel'],['600000116092050','Walmart'],['701-1234567-1234567','Amazon'],['709-123-45','Amazon'],['200002123456789',''],['20000212345678901',''],['2000011234567890',''],['EC123',''],['EC12345',''],['123-A-extra',''],['701-123-',''],['7001234567',''],['','']])assert.equal(detectChannel(order),channel,order);
+console.log('Order channel detection: five channel patterns, normalization and unmatched input passed.');

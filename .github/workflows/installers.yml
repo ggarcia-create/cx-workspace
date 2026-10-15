@@ -71,6 +71,7 @@ jobs:
           merge-multiple: true
           path: release-files
       - run: node scripts/release-manifest.cjs
+      - run: python3 scripts/share-package.py
       - name: Create reviewable release
         env:
           GH_TOKEN: ${{ github.token }}

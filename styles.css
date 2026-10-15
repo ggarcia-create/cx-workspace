@@ -56,3 +56,5 @@ main{max-width:none;margin:0;padding:26px 30px 32px}.breadcrumb{margin-bottom:16
 .primary-button,.secondary-button{font-family:inherit;line-height:1.3;min-height:42px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;cursor:pointer}
 .primary-button:disabled,.secondary-button:disabled{opacity:.55;cursor:not-allowed}
 .dashboard-filters input:focus-visible,.dashboard-filters select:focus-visible,.primary-button:focus-visible,.secondary-button:focus-visible{outline:2px solid #488b78;outline-offset:2px}
+
+.section-step-actions{display:flex;justify-content:flex-end;margin-top:18px}.registration-final-area{margin-top:22px}.registration-final-area>label{grid-column:1/-1;max-width:480px}.registration-complete>summary strong::after{content:' · Completado';font-size:11px;color:#39815d;font-weight:400}.section-form .form-card{scroll-margin-top:110px}#detected-channel:empty{display:none}

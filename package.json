@@ -1,7 +1,7 @@
 {
   "name": "cx-workspace",
-  "version": "0.10.3",
-  "description": "Customer Experience \u2014 espacio de trabajo",
+  "version": "0.10.4",
+  "description": "Customer Experience — espacio de trabajo",
   "private": true,
   "scripts": {
     "start": "tauri dev",
@@ -9,7 +9,7 @@
     "build:mac": "tauri build --bundles app,dmg",
     "build:win": "tauri build --bundles nsis",
     "prepare:tauri": "node scripts/prepare-tauri.cjs",
-    "test": "node tests/cloud-access.cjs && node tests/tauri-backend.cjs && node tests/catalog-and-area.cjs && node tests/secure-session.cjs && node tests/workflow-and-analytics.cjs && node tests/report-delivery.cjs"
+    "test": "node tests/cloud-access.cjs && node tests/tauri-backend.cjs && node tests/catalog-and-area.cjs && node tests/secure-session.cjs && node tests/workflow-and-analytics.cjs && node tests/report-delivery.cjs && node tests/registration.cjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

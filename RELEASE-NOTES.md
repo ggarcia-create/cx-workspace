@@ -1,7 +1,8 @@
-# CX Workspace 0.10.3
+# CX Workspace 0.10.4
 
-- Informe ejecutivo sin la gráfica duplicada de componentes; conserva el desglose de problemas y fallas específicas.
-- Leyendas breves calculadas con los resultados de cada gráfica, sin texto metodológico repetitivo.
-- Motivo principal por expediente en el resumen; los importes y KPI cuentan cada expediente una sola vez.
-- Resumen de expedientes únicos, expedientes con varias fallas y fallas distintas. Cada falla repetida en el mismo expediente cuenta una vez.
-- Mismo contenido en la vista previa, PDF descargado y PDF enviado por correo.
+- Detección del canal comercial al escribir o pegar el número de pedido: Mercado Libre, Shopify, Coppel, Walmart y Amazon.
+- El canal se puede corregir manualmente si el pedido no coincide con la nomenclatura.
+- Cantidad inicial de 1, editable en registros individuales y masivos.
+- Las secciones completas se minimizan al avanzar y pueden abrirse nuevamente para corregir datos.
+- Área responsable al final del registro; conserva la validación obligatoria.
+- ZIP para compartir los tres instaladores con instrucciones y sumas de verificación.
