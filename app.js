@@ -202,7 +202,7 @@ function drawNavigation(){
  nav.innerHTML = modules.filter(m=>can(m.id)).map(m=>`<div class="navgroup"><button class="navitem ${current===m.id?'active':''}" data-module="${m.id}" title="${m.name}" ${current===m.id?'aria-current="page"':''} ${m.items.length?`aria-expanded="${expanded.has(m.id)}" aria-controls="sub-${m.id}"`:''}>${icon(m.icon)}<span>${m.name}</span>${m.items.length?icon('chevron').replace('<svg','<svg class="chevron"'):''}</button>${m.items.length?`<div class="submenu" id="sub-${m.id}" ${expanded.has(m.id)?'':'hidden'}>${m.items.map((it,i)=>`<button data-module="${m.id}" data-index="${i}" class="${current===m.id&&selected===i?'active':''}" ${current===m.id&&selected===i?'aria-current="page"':''}>${icon(it[1])}${it[0]}</button>`).join('')}</div>`:''}</div>`).join('');
 }
 function render(){
- if(!Object.keys(moduleNames).some(m=>can(m))){content.innerHTML='<div class="empty"><h1>Sin acceso a módulos</h1><p>Solicita permisos a tu administrador.</p></div>';drawNavigation();return;}
+ if(!Object.keys(moduleNames).some(m=>can(m))){content.innerHTML='<div class="empty"><h1>Bienvenido a CX Workspace</h1><p>Tu sesión está iniciada. El administrador habilitará los módulos que puedes ver y editar.</p><p>Puedes buscar e instalar actualizaciones desde el menú de tu cuenta.</p></div>';drawNavigation();return;}
  if(current==='dashboard'){renderDashboard();drawNavigation();return;}
  if(current==='configuracion'){renderSettings();drawNavigation();return;}
  const m = modules.find(m=>m.id===current);

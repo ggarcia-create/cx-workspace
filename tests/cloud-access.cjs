@@ -3,7 +3,7 @@ const root=path.resolve(__dirname,'..');
 let source=fs.readFileSync(path.join(root,'supabase/functions/cx-api/index.ts'),'utf8');
 source=source.replace("import {scryptSync,randomBytes,timingSafeEqual,randomUUID} from 'node:crypto';","const {scryptSync,randomBytes,timingSafeEqual,randomUUID}=require('crypto');").replace("import {createClient} from 'npm:@supabase/supabase-js@2.117.3';",'').replace("import * as pdfLib from 'npm:pdf-lib@1.17.1';","const pdfLib=require('pdf-lib');").replace("import nodemailer from 'npm:nodemailer@7.0.11';",'').replace("import {Buffer} from 'node:buffer';","const {Buffer}=require('node:buffer');");
 const users=[{id:'admin',email:'admin@example.test',name:'Admin',role:'admin',permissions:{},approved:true,active:true,updated_at:'2026-10-14T00:00:00Z'},{id:'pending',email:'pending@example.test',name:'Pending',role:'agent',permissions:{registros:{view:true,edit:true}},approved:false,active:true,updated_at:'2026-10-14T00:00:00Z'},{id:'viewer',email:'viewer@example.test',name:'Viewer',role:'agent',permissions:{devoluciones:{view:true,edit:false}},approved:true,active:true,updated_at:'2026-10-14T00:00:00Z'}];
-users.push({id:'spectator',email:'spectator@example.test',name:'Spectator',role:'agent',permissions:Object.fromEntries(['dashboard','registros','devoluciones','reparacion','calidad','facturacion','configuracion'].map(m=>[m,{view:true,edit:false}])),approved:true,active:true,updated_at:'now'});
+users.push({id:'spectator',email:'spectator@example.test',name:'Spectator',role:'agent',permissions:{},approved:true,active:true,updated_at:'now'});
 let handler,commits=0,reads=0;
 const workspace={id:1,version:0,state:{records:[],audit:[],notifications:[],monthlySales:[],nextNumber:1,migrated:false}};
 const service={from(table){return {select(){if(table==='cx_profiles')return Promise.resolve({data:structuredClone(users)});reads++;return {eq(){return {single:async()=>({data:structuredClone(workspace)})};}};},update(values){return {eq:async(_,id)=>{Object.assign(users.find(u=>u.id===id),values);return {error:null};}};} };},async rpc(_,args){commits++;workspace.state=structuredClone(args.next_state);workspace.version++;return {data:true,error:null};}};
@@ -22,7 +22,8 @@ async function request(actor,method,input,clientVersion){const response=await ha
  assert.equal(commits,0);
  assert.equal((await request('admin','arbitraryAction')).status,400);
  assert.equal((await request('admin','saveUser',{id:'admin',role:'agent',active:false})).status,400);
- for(const method of ['listRecords','listMonthlySales','dashboardData','listTechnicians'])assert.equal((await request('spectator',method,null,'0.10.7')).status,200,method);
+ assert.deepEqual((await request('spectator','listRecords',null,'0.10.8')).body.result,[]);
+ for(const method of ['listMonthlySales','dashboardData','listTechnicians'])assert.notEqual((await request('spectator',method,null,'0.10.8')).status,200,method);
  for(const method of ['saveRecord','saveMonthlySales','deleteRecord'])assert.notEqual((await request('spectator',method,{},'0.10.7')).status,200,method);
  assert.equal((await request('spectator','listUsers')).status,403);assert.equal((await request('spectator','saveUser',{})).status,403);
  const update=await request('admin','saveUser',{id:'pending',name:'Authorized',role:'intake',active:true,permissions:{registros:{view:true,edit:true}}});

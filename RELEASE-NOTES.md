@@ -1,4 +1,4 @@
-# CX Workspace 0.10.7
+# CX Workspace 0.10.8
 
 - Buscar actualizaciones disponible antes de iniciar sesión, en cuentas pendientes y al fallar el arranque del acceso.
 - La consulta inicial de la sesión guardada deja de bloquear la pantalla de entrada si tarda en responder.
@@ -6,4 +6,4 @@
 - Las cuentas pendientes muestran el correo utilizado para identificar la cuenta correcta.
 - Mantiene la aprobación y los permisos asignados por el administrador; actualizar no concede acceso a los módulos.
 
-- Nuevos registros con lectura de todos los módulos, sin edición; el administrador ajusta permisos posteriormente. La migración no cambia usuarios existentes.
+- Las cuentas nuevas inician sesión en la interfaz sin módulos ni datos. El administrador habilita qué pueden ver y editar. Los permisos existentes se conservan.
