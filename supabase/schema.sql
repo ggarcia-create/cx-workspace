@@ -23,7 +23,10 @@ revoke all on public.cx_workspace from anon,authenticated;
 insert into public.cx_workspace(id) values(1) on conflict do nothing;
 create or replace function public.cx_create_profile() returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
 begin
- insert into public.cx_profiles(id,email,name) values(new.id,new.email,coalesce(nullif(new.raw_user_meta_data->>'name',''),nullif(new.raw_user_meta_data->>'full_name',''),split_part(new.email,'@',1))) on conflict(id) do nothing;
+ insert into public.cx_profiles(id,email,name,role,permissions,approved,active)
+ values(new.id,new.email,coalesce(nullif(new.raw_user_meta_data->>'name',''),nullif(new.raw_user_meta_data->>'full_name',''),split_part(new.email,'@',1)),
+ 'agent','{"dashboard":{"view":true,"edit":false},"registros":{"view":true,"edit":false},"devoluciones":{"view":true,"edit":false},"reparacion":{"view":true,"edit":false},"calidad":{"view":true,"edit":false},"facturacion":{"view":true,"edit":false},"configuracion":{"view":true,"edit":false}}'::jsonb,true,true)
+ on conflict(id) do nothing;
  return new;
 end;
 $$;

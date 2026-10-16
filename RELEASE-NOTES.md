@@ -1,7 +1,9 @@
-# CX Workspace 0.10.6
+# CX Workspace 0.10.7
 
-- Mercado Libre: detección de pedidos de 16 dígitos que comienzan con 20000.
-- Correos de reportes con saludo, contexto del informe y periodo, propósito de mejora continua y firma profesional. Incluye vista previa del cuerpo.
-- Dashboard con pasteles más compactos y proporciones uniformes.
-- Histórico por mes, desde enero hasta el mes final seleccionado: ejecutados del mes / ventas del mes, respetando el canal. Los meses sin reclamos aparecen en cero; los meses con reclamos sin ventas no muestran un porcentaje inventado.
-- Conserva la corrección de las revisiones de acceso y el actualizador firmado.
+- Buscar actualizaciones disponible antes de iniciar sesión, en cuentas pendientes y al fallar el arranque del acceso.
+- La consulta inicial de la sesión guardada deja de bloquear la pantalla de entrada si tarda en responder.
+- Recuperación del arranque con Volver a intentar, sin tener que cerrar la aplicación.
+- Las cuentas pendientes muestran el correo utilizado para identificar la cuenta correcta.
+- Mantiene la aprobación y los permisos asignados por el administrador; actualizar no concede acceso a los módulos.
+
+- Nuevos registros con lectura de todos los módulos, sin edición; el administrador ajusta permisos posteriormente. La migración no cambia usuarios existentes.
