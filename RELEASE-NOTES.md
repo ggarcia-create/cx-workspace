@@ -1,7 +1,7 @@
-# CX Workspace 0.10.5
+# CX Workspace 0.10.6
 
-- Una falla temporal al revisar la conexión o actualizar expedientes conserva la pantalla y los datos en edición.
-- Cuenta pendiente solo aparece cuando el servidor confirma que faltan autorización o permisos.
-- Las revisiones automáticas no se superponen ni aplican respuestas de una sesión anterior.
-- Conserva la validación de permisos en cada operación y el bloqueo de cuentas revocadas.
-- Incluye instaladores de Mac y Windows y ZIP para compartir.
+- Mercado Libre: detección de pedidos de 16 dígitos que comienzan con 20000.
+- Correos de reportes con saludo, contexto del informe y periodo, propósito de mejora continua y firma profesional. Incluye vista previa del cuerpo.
+- Dashboard con pasteles más compactos y proporciones uniformes.
+- Histórico por mes, desde enero hasta el mes final seleccionado: ejecutados del mes / ventas del mes, respetando el canal. Los meses sin reclamos aparecen en cero; los meses con reclamos sin ventas no muestran un porcentaje inventado.
+- Conserva la corrección de las revisiones de acceso y el actualizador firmado.

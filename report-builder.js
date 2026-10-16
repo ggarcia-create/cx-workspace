@@ -16,6 +16,17 @@
  const areaNames=['Empaque - Logística','Ecommerce - Marketing','Cliente','Acondicionamiento','Paquetería','Sin área asignada'];
  const scopeName=f=>f.mode==='area'?(f.area||'Todas las áreas'):'General';
  const subject=f=>`Reporte de devoluciones - ${scopeName(f)} - ${f.from} al ${f.to}`;
+ const emailBody=f=>`Buen día.
+
+Adjunto a este correo encontrará el informe de devoluciones ${f.mode==='area'?'del área '+scopeName(f):'general'}, correspondiente al periodo del ${f.from} al ${f.to}.
+
+El informe presenta los reclamos y los problemas reportados durante este periodo, con el propósito de facilitar su análisis, identificar oportunidades de mejora y apoyar la definición de acciones de mejora continua.
+
+Agradecemos su atención y colaboración en el seguimiento de los resultados.
+
+Saludos cordiales,
+Equipo de Customer Experience
+Rematech`;
  const filename=f=>`Reporte-devoluciones-${scopeName(f).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-')}-${f.from}-${f.to}.pdf`;
  function analyze(records,filter,monthlySales=[]){
   const seen=new Set();records=records.filter(r=>{if(!r.id)return true;if(seen.has(r.id))return false;seen.add(r.id);return true;});
@@ -45,5 +56,5 @@
  function kpis(a){return `<div class="report-kpis">${[['Total de reclamos',money(a.total)],['Reclamos ejecutados',money(a.executedTotal)],['% de reclamos',a.sales?pct(a.total,a.sales):'—'],['% de reclamos ejecutados',a.sales?pct(a.executedTotal,a.sales):'—']].map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;}
  function renderOne(a){const n=a.rows.length;return `<section class="report-page">${header(a)}${kpis(a)}<section class="report-summary"><h2>Resumen ejecutivo</h2><p><strong>${n} expedientes únicos</strong> · ${a.typeCounts[0]} devoluciones · ${a.typeCounts[1]} cambios · ${a.typeCounts[2]} servicios · ${a.typeCounts[3]} reembolsos parciales.</p><p>${a.multipleFaultRecords} expedientes con varios motivos o fallas · ${a.faultCount} detalles reportados.</p></section><div class="report-grid"><section><h2>Motivo principal del reclamo</h2>${donut(a.reasons,n)}<p>${esc(a.captions.reasons)}</p></section><section><h2>Reclamos por canal</h2>${bars(a.channels,n)}<p>${esc(a.captions.channels)}</p></section><section><h2>Áreas responsables</h2>${bars(a.areas,n)}<p>${esc(a.captions.areas)}</p></section><section><h2>Equipos con más reclamos</h2><table><thead><tr><th>Marca, línea y modelo</th><th>Exp.</th><th>%</th></tr></thead><tbody>${a.products.slice(0,5).map(i=>`<tr><td>${esc(i.label)}</td><td>${i.count}</td><td>${pct(i.count,n)}</td></tr>`).join('')||'<tr><td colspan="3">Sin datos</td></tr>'}</tbody></table><p>${esc(a.captions.products)}</p></section></div><section class="report-summary report-conclusions"><h2>Concentración de los reclamos</h2>${a.findings.slice(1,4).map(t=>`<p>${esc(t)}</p>`).join('')}</section><footer>CX Workspace · Ventas del periodo: ${money(a.sales)} · MXN</footer></section><section class="report-page report-detail">${header(a,true)}<div class="report-count-note"><strong>${n} expedientes únicos</strong> · ${a.multipleFaultRecords} con varios motivos o fallas · ${a.faultCount} detalles reportados</div>${a.sections.map(section=>`<section class="report-reason"><h2>${esc(section.label)} · ${section.count} expedientes</h2><div class="report-grid"><div><h3>${section.label===analytics.reasons[0]?'Problemas / componentes reportados':'Motivos específicos reportados'}</h3>${bars(section.items,section.count)}${section.label===analytics.reasons[0]?`<p>${esc(section.componentCaption)}</p>`:''}</div><div><h3>${section.label===analytics.reasons[0]?'Fallas específicas más frecuentes':'Concentración del motivo'}</h3>${section.label===analytics.reasons[0]?`${bars(section.specifics,section.count)}<p>${esc(section.specificCaption)}</p>`:`<p>${esc(section.componentCaption)}</p>`}</div></div></section>`).join('')}<footer>CX Workspace · Expedientes únicos por falla; las fallas no se suman al total de reclamos.</footer></section>`;}
  function render(a){return `<article class="executive-report compact-report">${(Array.isArray(a)?a:[a]).map(renderOne).join('')}</article>`;}
- const api={analyze,render,pages,scopeName,subject,filename,productModel,areaNames};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.returnReport=api;
+ const api={analyze,render,pages,scopeName,subject,emailBody,filename,productModel,areaNames};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.returnReport=api;
 })(globalThis);

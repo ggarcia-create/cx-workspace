@@ -1,6 +1,6 @@
 (function(root){
  function detectChannel(order){const value=String(order??'').trim().toUpperCase();
-  if(/^200002\d{10}$/.test(value))return 'Mercado Libre';
+  if(/^20000\d{11}$/.test(value))return 'Mercado Libre';
   if(/^EC\d{4}$/.test(value))return 'Shopify';
   if(/^.+-A$/.test(value))return 'Coppel';
   if(/^6000\d*$/.test(value))return 'Walmart';

@@ -21,5 +21,16 @@
   const months=monthlySales.filter(m=>m.month>=from.slice(0,7)&&m.month<=to.slice(0,7));
   return {total:months.reduce((sum,m)=>sum+(channel?Number(m.totals?.[channel]||0):Object.values(m.totals||{}).reduce((s,n)=>s+Number(n||0),0)),0),available:months.length>0};
  }
- const api={salesForPeriod,clean,key,reasons,reason,sale,executed,executedAmount,faults,groups,drilldown};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.claimAnalytics=api;
+ function monthlyHistory(records,monthlySales,from,to,channel=''){
+  const start=from.slice(0,4)+'-01',end=to.slice(0,7),points=[];
+  const unique=[...new Map(records.map((r,i)=>[r.id||'row-'+i,r])).values()];
+  for(let year=Number(start.slice(0,4)),month=1;year+'-'+String(month).padStart(2,'0')<=end;month===12?(year++,month=1):month++){
+   const key=year+'-'+String(month).padStart(2,'0');
+   const rows=unique.filter(r=>r.date?.slice(0,7)===key&&(!channel||r.contact===channel)&&executed(r));
+   const total=rows.reduce((sum,r)=>sum+executedAmount(r),0),sales=salesForPeriod(monthlySales,key+'-01',key+'-31',channel);
+   points.push({month:key,total,sales:sales.total,value:rows.length===0?0:sales.total>0?total/sales.total*100:null,count:rows.length});
+  }
+  return points;
+ }
+ const api={monthlyHistory,salesForPeriod,clean,key,reasons,reason,sale,executed,executedAmount,faults,groups,drilldown};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.claimAnalytics=api;
 })(globalThis);
