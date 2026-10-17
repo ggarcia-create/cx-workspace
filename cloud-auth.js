@@ -18,6 +18,7 @@ function cloudVerifyScreen(email){cloudCard('Verifica tu correo','Ingresa el có
 function cloudResetScreen(){cloudCard('Restablecer contraseña','Solicita un código de recuperación a tu correo.','<form id="cloud-reset-form"><label>Correo electrónico<input name="email" type="email" required autocomplete="email"></label><button class="primary-button" type="submit">Enviar código</button></form><button id="cloud-back" class="secondary-button">Volver</button>');document.getElementById('cloud-back').onclick=cloudLoginScreen;document.getElementById('cloud-reset-form').onsubmit=async e=>{e.preventDefault();const email=e.target.elements.email.value;try{await desktop.cloudRequestReset({email});cloudResetVerify(email);}catch(error){cloudError(error);}};}
 function cloudResetVerify(email){cloudCard('Nueva contraseña','Si el correo tiene una cuenta, recibirás un código de recuperación.','<form id="cloud-new-password"><label>Código<input name="code" required inputmode="numeric" pattern="[0-9]{6,8}" minlength="6" maxlength="8" autocomplete="one-time-code"></label><label>Nueva contraseña<input name="password" type="password" minlength="8" maxlength="128" required autocomplete="new-password"></label><button class="primary-button" type="submit">Restablecer contraseña</button></form><button id="cloud-back" class="secondary-button">Volver</button>');document.getElementById('cloud-back').onclick=cloudLoginScreen;document.getElementById('cloud-new-password').onsubmit=async e=>{e.preventDefault();try{const data=Object.fromEntries(new FormData(e.target));await cloudEnter(await desktop.cloudVerifyReset({...data,email}));}catch(error){cloudError(error);}};}
 let cloudAccessReviewRunning=false;
+let cloudRecordsSnapshot=null;
 async function reviewCloudAccess(){
  if(cloudAccessReviewRunning||!cloudMode||!currentUser||authRoot.hidden!==true)return;
  cloudAccessReviewRunning=true;
@@ -34,11 +35,12 @@ async function reviewCloudAccess(){
   updateProfile();
   if(accessChanged){closeGlobalSearch();records=[];openRecord=null;editingRecord=null;recordType=null;current=Object.keys(moduleNames).find(m=>can(m))||'registros';selected=0;render();}
   if(user.role!=='admin'&&!Object.values(user.permissions||{}).some(p=>p.view))return;
-  if(!recordType&&!openRecord){
+  const unchanged=!accessChanged&&Number.isSafeInteger(user.dataVersion)&&cloudRecordsSnapshot?.accountId===accountId&&cloudRecordsSnapshot.version===user.dataVersion;
+  if(!recordType&&!openRecord&&!unchanged){
    try{
     const refreshed=await desktop.listRecords();
     if(!currentUser||currentUser.id!==accountId||authRoot.hidden!==true||recordType||openRecord)return;
-    records=refreshed;
+    records=refreshed;cloudRecordsSnapshot={accountId,version:user.dataVersion};
     if(['devoluciones','reparacion','calidad'].includes(current))drawRecordCards();
    }catch{/* A failed refresh preserves the current workspace; server permissions still apply to every operation. */}
   }

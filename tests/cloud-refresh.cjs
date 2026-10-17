@@ -8,6 +8,9 @@ function setup(profile,list){const c={desktop:{cloudProfile:profile,listRecords:
  c=setup(async()=>({...admin,active:false}),async()=>[]);await c.reviewCloudAccess();assert.equal(c.authRoot.hidden,false);assert.equal(c.records.length,0);
  let resolve,calls=0;c=setup(()=>{calls++;return new Promise(r=>resolve=r)},async()=>[]);const first=c.reviewCloudAccess();await c.reviewCloudAccess();assert.equal(calls,1);c.currentUser=null;resolve(admin);await first;assert.equal(c.currentUser,null);assert.equal(c.records[0],'existing');
  c=setup(async()=>admin,async()=>['fresh']);await c.reviewCloudAccess();assert.equal(c.records[0],'fresh');
+ let version=12,downloads=0;c=setup(async()=>({...admin,dataVersion:version}),async()=>{downloads++;return ['fresh'];});
+ await c.reviewCloudAccess();await c.reviewCloudAccess();assert.equal(downloads,1,'An unchanged workspace does not download all records again.');
+ version++;await c.reviewCloudAccess();assert.equal(downloads,2,'A committed change refreshes records.');
  c=setup(async()=>admin,async()=>[]);vm.runInContext('enterWorkspace=async()=>{authRoot.hidden=true;}',c);await c.cloudEnter({id:'empty',active:true,pending:false,role:'agent',permissions:{}});assert.equal(c.authRoot.hidden,true);
  console.log('Cloud refresh: transient failures preserve workspace, revocation blocks, overlapping checks and stale sessions are ignored.');
 })().catch(e=>{console.error(e);process.exitCode=1});

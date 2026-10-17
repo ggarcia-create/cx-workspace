@@ -20,8 +20,13 @@ Deno.serve(async req=>{
  const service=createClient(url,secret,{auth:{persistSession:false}}),body=await req.json(),{method,input,clientVersion}=body;const [clientMajor,clientMinor]=String(clientVersion||'0.0').split('.').map(Number),modernClient=clientMajor>0||clientMinor>=10;
  const fetchProfiles=async()=>{const {data,error}=await service.from('cx_profiles').select('*');if(error)throw Error('No se pudo leer la configuración de usuarios.');return data;};
  let profiles=await fetchProfiles(),profile=profiles.find(p=>p.id===authData.user.id);if(!profile)return reply({error:'No se encontró el perfil.'},403);
- if(method==='getProfile')return reply({result:userShape(profile)});
+ if(method==='getProfile'){
+  let dataVersion=null;
+  if(profile.approved&&profile.active&&(profile.role==='admin'||Object.values(profile.permissions||{}).some(p=>p.view))){const {data}=await service.from('cx_workspace').select('version').eq('id',1).single();dataVersion=Number.isSafeInteger(data?.version)?data.version:null;}
+  return reply({result:{...userShape(profile),dataVersion}});
+ }
  if(!profile.approved||!profile.active)return reply({error:'Tu cuenta está pendiente de autorización del administrador.'},403);
+ if(method==='archiveConnectionTest'){if(profile.role!=='admin')return reply({error:'Solo el administrador puede configurar el histórico.'},403);return reply({result:await archiveConnectionTest()});}
  if(method==='listUsers'){if(profile.role!=='admin')return reply({error:'Solo el administrador puede gestionar usuarios.'},403);return reply({result:profiles.map(userShape)});}
  if(method==='saveUser'){
  if(profile.role!=='admin')return reply({error:'Solo el administrador puede gestionar usuarios.'},403);
@@ -40,7 +45,7 @@ Deno.serve(async req=>{
  for(let attempt=0;attempt<4;attempt++){
  profiles=await fetchProfiles();profile=profiles.find(p=>p.id===authData.user.id);if(!profile?.active||!profile.approved)return reply({error:'Tu cuenta no tiene acceso.'},403);
  const {data:workspace,error}=await service.from('cx_workspace').select('*').eq('id',1).single();if(error)throw Error('No se pudo cargar el espacio compartido.');
- const state={...workspace.state,users:profiles.map(userShape)},business=createBusinessStore(state,profile.id);let result;
+ const state={...await hydrateWorkspace(workspace.state),users:profiles.map(userShape)},business=createBusinessStore(state,profile.id);let result;
  if(method==='importLocalData'){
  if(profile.role!=='admin')return reply({error:'Solo el administrador puede importar datos.'},403);
  if(state.records.length)throw Error('La importación inicial solo está disponible cuando el espacio compartido está vacío.');
@@ -55,7 +60,7 @@ Deno.serve(async req=>{
  result={imported:next.records.length};
  }else result=business.api[method](input);
  if(readMethods.has(method))return reply({result:modernClient?result:legacyWorkflowResult(result,input)});
- const next=business.getState();next.users=[];
+ const next=await stageWorkspace(business.getState());next.users=[];
  const {data:committed,error:commitError}=await service.rpc('cx_commit_state',{expected_version:workspace.version,next_state:next,actor_id:profile.id,expected_profile_updated:profile.updated_at});if(commitError)throw Error('No se pudieron guardar los cambios.');if(committed)return reply({result:modernClient?result:legacyWorkflowResult(result,input)});
  }
  return reply({error:'Otro usuario actualizó los datos. Intenta nuevamente.'},409);
