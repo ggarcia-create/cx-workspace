@@ -1,6 +1,6 @@
 # Historical storage — implementation status
 
-The connection and compatible backend are deployed. Archive activation awaits final confirmation. No source records have been removed.
+Active in production since 2026-10-17, following explicit final confirmation. Source version 89 was backed up and verified, then committed as version 90: 80 September records and September sales in Sheets, 6 October records and October sales in Supabase. Both account profiles were retained.
 
 ## Verified backup
 
@@ -20,7 +20,7 @@ Readable worksheets: Expedientes, Fallas, Reparaciones, Calidad, Seguimiento, Ve
 
 1. Server-only access is configured using Rematech Sheets. A deployed protected diagnostic confirmed real read/write on 2026-10-17. Never embed credentials in desktop assets, Git, workbook cells, or logs.
 2. The authenticated Sheets object adapter is implemented locally. Append immutable revisions, read back and verify before returning a reference. A timeout must not publish an unverified reference. Store only references/checksums in Supabase.
-3. Hydration and staging are wired locally into business operations, report data, email report generation and `cx_commit_state`. The cx-api backend is deployed; activation is pending final confirmation. Commit the index and live state atomically through existing version/profile checks. A losing commit may leave an unreferenced Sheet revision; it must never overwrite the winner.
+3. Hydration and staging are wired locally into business operations, report data, email report generation and `cx_commit_state`. The cx-api backend is deployed; activation is complete. Commit the index and live state atomically through existing version/profile checks. A losing commit may leave an unreferenced Sheet revision; it must never overwrite the winner.
 4. Lightweight version refresh is implemented locally; deploy it to replace full unchanged downloads. Add scoped reads and scoped reads so clients do not fetch every record each 30 seconds. Combine both sources under the existing module permissions. On Sheets failure, expose unavailable history instead of silently returning an incomplete dashboard or report.
 5. Add explicit import preview and validation using the existing business validator. Reject missing required fields and ambiguous destinations. Preserve valid IDs and serials; reserve new folios once per idempotent batch. Do not treat an arbitrary edited workbook as trusted application state.
 6. Real server read/write and complete snapshot recovery were verified. Local integration tests cover historical serial edits, module permissions, combined dashboard and explicit failure when Sheets is unavailable. Broader import and desktop release work remains.
