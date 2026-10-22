@@ -5,7 +5,7 @@ const {createCloudClient}=require('../cloud-client.cjs');
 const config=require('../cloud-config.json');
 const report=require('../report-builder.js');
 const {createReportPDF}=require('../report-pdf.cjs');
-const methods=new Set(['faultReportData','dashboardData','listMonthlySales','saveMonthlySales','status','setup','login','logout','changePassword','listRecords','saveRecord','saveRecords','deleteRecord','saveRepair','listTechnicians','listNotifications','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','migrateRecords','listUsers','saveUser']);
+const methods=new Set(['faultReportData','dashboardData','listMonthlySales','saveMonthlySales','status','setup','login','logout','changePassword','listRecords','saveRecord','saveRecords','deleteRecord','saveRepair','listTechnicians','listCommentUsers','addRecordComment','listNotifications','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','migrateRecords','listUsers','saveUser']);
 const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');
 console.log=(...args)=>console.error(...args);
 const directory=process.argv[2];if(!directory)throw Error('Missing application data directory');
