@@ -5,7 +5,7 @@ const {createCloudClient}=require('../cloud-client.cjs');
 const config=require('../cloud-config.json');
 const report=require('../report-builder.js');
 const {createReportPDF}=require('../report-pdf.cjs');
-const methods=new Set(['faultReportData','dashboardData','listMonthlySales','saveMonthlySales','status','setup','login','logout','changePassword','listRecords','saveRecord','saveRecords','deleteRecord','saveRepair','listTechnicians','listCommentUsers','addRecordComment','listNotifications','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','migrateRecords','listUsers','saveUser']);
+const methods=new Set(['faultReportData','dashboardData','listMonthlySales','saveMonthlySales','status','setup','login','logout','changePassword','listRecords','deleteRecord','saveRepair','listTechnicians','listCommentUsers','addRecordComment','listNotifications','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','migrateRecords','listUsers','saveUser']);
 const emit=value=>process.stdout.write(JSON.stringify(value)+'\n');
 console.log=(...args)=>console.error(...args);
 const directory=process.argv[2];if(!directory)throw Error('Missing application data directory');
@@ -21,7 +21,9 @@ const invoke=async(method,input)=>{
 };
 const cloudMethods={cloudResume:'resume',cloudGoogle:'google',cloudSendSignup:'sendSignup',cloudVerifySignup:'verifySignup',cloudRequestReset:'requestReset',cloudVerifyReset:'verifyReset',cloudProfile:'profile'};
 async function dispatch(method,input){
+ if(method==='openSheetIntake'){emit({event:'open-url',url:'https://docs.google.com/spreadsheets/d/18K2GhkeDERiHDx1cw_lNXOIcdUFF4cG6X1QQE1ghd1I/edit?gid=1764230010#gid=1764230010'});return true;}
  if(methods.has(method))return invoke(method,input);
+ if(['previewSheetIntake','syncSheetIntake'].includes(method)){if(!cloud)throw Error('La captura desde Google Sheets requiere la conexión compartida de CX Workspace.');return cloud.call(method,input);}
  if(['reportMailStatus','sendFaultReport'].includes(method)){if(!cloud)throw Error('El envío de reportes requiere el espacio compartido.');return cloud.call(method,input);}
  if(Object.hasOwn(cloudMethods,method)){if(!cloud)throw Error('Acceso compartido no configurado.');return cloud[cloudMethods[method]](input);}
  if(method==='cloudImportLocal'){

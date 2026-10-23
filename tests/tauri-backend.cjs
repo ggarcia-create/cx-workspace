@@ -18,6 +18,8 @@ async function load(cloudMode){
   assert.match((await local.call('listRecords')).error,/sesión/);
   assert.equal((await local.call('setup',{username:'admin',name:'Admin',password:'Safe-test-123'})).result.role,'admin');
   assert.deepEqual((await local.call('listRecords')).result,[]);
+  assert.equal((await local.call('openSheetIntake')).result,true);
+  assert.match((await local.call('syncSheetIntake')).error,/conexión compartida/);
   const pdf=(await local.call('exportReturnPDF',{from:'2026-10-01',to:'2026-10-15',mode:'general'})).result;assert.equal(Buffer.from(pdf.bytes).subarray(0,5).toString(),'%PDF-');assert.match(pdf.filename,/General.*\.pdf$/);
   assert.equal((await local.call('logout')).result,true);
   assert.match((await local.call('listRecords')).error,/sesión/);
@@ -26,6 +28,7 @@ async function load(cloudMode){
  const cloud=await load(true);try{
   assert.equal((await cloud.call('status')).result.cloud,true);
   assert.equal((await cloud.call('cloudGoogle')).result.pending,true);assert.equal((await cloud.call('cloudResume')).result.role,'admin');
+  await cloud.call('syncSheetIntake');assert.equal(cloud.calls.at(-1).method,'syncSheetIntake');
   const csv=(await cloud.call('exportFaultReport',{})).result;assert.ok(csv.includes("'=HYPERLINK"),'CSV formula injection neutralized');
   assert.match((await cloud.call('cloudImportLocal')).error,/No hay expedientes/);
   await cloud.call('deleteRecord','case-id');assert.equal(cloud.calls.at(-1).method,'deleteRecord');

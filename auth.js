@@ -1,6 +1,6 @@
 let currentUser=null;
 const desktop=window.cxDesktop;
-const moduleNames={dashboard:'Dashboard',registros:'Registros',devoluciones:'Devoluciones',reparacion:'Reparación',calidad:'Calidad',facturacion:'Facturación',configuracion:'Configuración'};
+const moduleNames={dashboard:'Dashboard',registros:'Carga desde Sheets',devoluciones:'Devoluciones',reparacion:'Reparación',calidad:'Calidad',facturacion:'Facturación',configuracion:'Configuración'};
 const can=(module,action='view')=>Boolean(currentUser&&(currentUser.role==='admin'||currentUser.permissions?.[module]?.view&&(action==='view'||currentUser.permissions?.[module]?.edit)));
 const isAdmin=()=>currentUser?.role==='admin';
 const authRoot=document.createElement('div');authRoot.id='auth-root';document.body.append(authRoot);
@@ -16,7 +16,7 @@ async function enterWorkspace(){
  technicians=can('reparacion')?await desktop.listTechnicians():[];records=Object.keys(moduleNames).some(m=>can(m))?await desktop.listRecords():[];openRecord=null;editingRecord=null;recordType=null;
  current=Object.keys(moduleNames).find(m=>can(m))||'registros';selected=0;
  authRoot.hidden=true;document.querySelector('.shell').hidden=false;
- updateProfile();render();await refreshNotifications();
+ updateProfile();render();await refreshNotifications();await handleSheetSyncDeepLink();
 }
 function updateProfile(){document.querySelector('.user strong').textContent=currentUser.name;document.querySelector('.user span').textContent=currentUser.role==='agent'&&!Object.values(currentUser.permissions||{}).some(p=>p.edit)?'Espectador':{admin:'Administrador',agent:'Usuario general',viewer:'Consulta',technician:'Reparación / Técnico',intake:'Ingresos',quality:'Calidad'}[currentUser.role];document.querySelector('.avatar').textContent=currentUser.name.slice(0,2).toUpperCase();}
 async function logout(){closeGlobalSearch();document.getElementById('global-search').value='';await desktop.logout();cloudSavedAccount=null;currentUser=null;records=[];batchRecords=[];batchReceivedDefault=false;registrationMode='single';openRecord=null;recordType=null;editingRecord=null;document.getElementById('account-menu').hidden=true;loginScreen();}

@@ -9,7 +9,7 @@ use std::{
     },
     time::Duration,
 };
-use tauri::{AppHandle, Manager, WebviewWindow};
+use tauri::{AppHandle, Manager, State as TauriState, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::{Update, UpdaterExt};
@@ -126,6 +126,17 @@ struct State {
     installing: AtomicBool,
     report: Mutex<String>,
 }
+struct DeepLinkPending(Arc<AtomicBool>);
+
+fn is_sheet_sync_link(value: &str) -> bool {
+    value == "cxworkspace://sync-sheet"
+}
+
+#[tauri::command]
+fn consume_sheet_sync_request(state: TauriState<'_, DeepLinkPending>) -> bool {
+    state.0.swap(false, Ordering::SeqCst)
+}
+
 fn status(app: &AppHandle, state: &str, message: &str) {
     *app.state::<State>().status.lock().unwrap() =
         json!({"state":state,"message":message,"version":app.package_info().version.to_string()});
@@ -342,10 +353,34 @@ fn print_ready(window: WebviewWindow) -> Result<(), String> {
     window.print().map_err(|e| e.to_string())
 }
 fn main() {
+    let pending_sheet_sync = Arc::new(AtomicBool::new(false));
+    let single_instance_pending = pending_sheet_sync.clone();
+    let setup_pending = pending_sheet_sync.clone();
     let app=tauri::Builder::default()
-  .plugin(tauri_plugin_single_instance::init(|app,_,_|{if let Some(w)=app.get_webview_window("main"){let _=w.show();let _=w.set_focus();}}))
+  .manage(DeepLinkPending(pending_sheet_sync))
+  .plugin(tauri_plugin_single_instance::init(move |app,args,_|{
+    if args.iter().any(|arg| is_sheet_sync_link(arg)) {
+      single_instance_pending.store(true, Ordering::SeqCst);
+    }
+    if let Some(w)=app.get_webview_window("main"){let _=w.show();let _=w.set_focus();}
+  }))
+  .plugin(tauri_plugin_deep_link::init())
   .plugin(tauri_plugin_opener::init()).plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_updater::Builder::new().build())
-  .setup(|app|{
+  .setup(move |app|{
+   use tauri_plugin_deep_link::DeepLinkExt;
+   if let Ok(Some(urls)) = app.deep_link().get_current() {
+    if urls.iter().any(|url| is_sheet_sync_link(url.as_str())) {
+     setup_pending.store(true, Ordering::SeqCst);
+    }
+   }
+   let open_pending = setup_pending.clone();
+   let open_app = app.handle().clone();
+   app.deep_link().on_open_url(move |event| {
+    if event.urls().iter().any(|url| is_sheet_sync_link(url.as_str())) {
+     open_pending.store(true, Ordering::SeqCst);
+    }
+    if let Some(w)=open_app.get_webview_window("main"){let _=w.show();let _=w.set_focus();}
+   });
    let data=app.path().data_dir()?.join("cx-workspace");
    #[cfg(debug_assertions)]let data=std::env::var_os("CX_TEST_DATA_DIR").map(std::path::PathBuf::from).unwrap_or(data);
    std::fs::create_dir_all(&data)?;
@@ -361,7 +396,7 @@ fn main() {
    Ok(())
   })
   .on_window_event(|window,event|{if window.label()=="main"{if let tauri::WindowEvent::CloseRequested{api,..}=event{let app=window.app_handle();if app.state::<State>().installing.load(Ordering::SeqCst){api.prevent_close();return;}if app.state::<State>().pending.lock().unwrap().is_some(){api.prevent_close();let handle=app.clone();tauri::async_runtime::spawn(async move{let _=install(handle).await;});}}}})
-  .invoke_handler(tauri::generate_handler![cx_call,print_content,print_ready]).build(tauri::generate_context!()).expect("No se pudo iniciar CX Workspace");
+  .invoke_handler(tauri::generate_handler![cx_call,consume_sheet_sync_request,print_content,print_ready]).build(tauri::generate_context!()).expect("No se pudo iniciar CX Workspace");
     app.run(|app, event| {
         if let tauri::RunEvent::ExitRequested { code, api, .. } = &event {
             let state = app.state::<State>();
@@ -391,6 +426,22 @@ fn main() {
 
 fn intercept_update_exit(code: Option<i32>, pending: bool, installing: bool) -> bool {
     pending && !installing && code != Some(tauri::RESTART_EXIT_CODE)
+}
+
+#[cfg(test)]
+mod deep_link_tests {
+    use super::*;
+
+    #[test]
+    fn only_the_sheet_sync_link_is_accepted_and_consumed_once() {
+        assert!(is_sheet_sync_link("cxworkspace://sync-sheet"));
+        assert!(!is_sheet_sync_link("cxworkspace://other"));
+        assert!(!is_sheet_sync_link("https://example.com/sync-sheet"));
+
+        let pending = DeepLinkPending(Arc::new(AtomicBool::new(true)));
+        assert!(pending.0.swap(false, Ordering::SeqCst));
+        assert!(!pending.0.swap(false, Ordering::SeqCst));
+    }
 }
 
 #[cfg(test)]

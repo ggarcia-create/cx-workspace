@@ -24,7 +24,9 @@ Los informes generales o por área se generan como PDF directamente y se guardan
 
 ## Flujo y análisis
 
-Los cambios nuevos esperan en Devoluciones en proceso la confirmación de recepción y cambio efectuado. Después comparten Expedientes · Devoluciones en Reparación y Calidad. La versión de esquema de navegación es 2; al cargar se agrupan los cambios antiguos y se reubica el índice de servicios, conservando historial y tipo. Los clientes anteriores reciben índices de navegación compatibles hasta actualizarse.
+Los expedientes nuevos se capturan en la pestaña «Carga rápida» del respaldo verificado de Google Sheets. CX Workspace valida cada fila, muestra su folio y módulo de destino, y pide confirmación antes de crear el expediente. Al completarse, limpia solo los datos de captura y registra el folio en «Historial de cargas»; las fórmulas, validaciones y formato quedan listos para la siguiente tanda. Las filas que requieren corrección permanecen en la hoja.
+
+Los cambios nuevos esperan en Devoluciones en proceso la confirmación de recepción y cambio efectuado. Al terminar Reparación, los expedientes de devoluciones y cambios se archivan directamente; solo los expedientes de servicio pasan a Calidad. Calidad conserva únicamente la lista de equipos en servicio. La versión 3 del esquema migra devoluciones que antes estaban en Calidad a Reparación como archivadas y deja los servicios en Calidad. La captura de un servicio permite marcar si el equipo tiene contraseña; solo usuarios con permiso de edición en Reparación o Calidad pueden consultarla.
 
 El dashboard enlaza motivo, problema/componente y falla específica. Los pasteles usan porcentajes de menciones para que sumen 100 %; cada detalle muestra además el porcentaje de expedientes del grupo y su importe. Las fallas adicionales se incluyen sin duplicar un expediente dentro del mismo problema. Los reportes incluyen los cuatro KPI y conservan la base global de ventas de todos los meses.
 

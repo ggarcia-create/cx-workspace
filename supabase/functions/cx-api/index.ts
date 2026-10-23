@@ -1,4 +1,5 @@
 // @ts-nocheck
+import {SHEET_INTAKE, mapSheetRecord, rowHasInput, routeSheetRecord} from '../../../sheet-intake.mjs';
 const catalogRoot={};
 (function(root){
  const catalog={
@@ -302,12 +303,13 @@ const catalogRoot={};
 const claimComponents=catalogRoot.claimComponents;
 import {scryptSync,randomBytes,timingSafeEqual,randomUUID} from 'node:crypto';
 const modules=['dashboard','registros','devoluciones','reparacion','calidad','facturacion','configuracion'];
-const locations={devoluciones:['Devoluciones en proceso','Retiros','Devoluciones cerradas'],reparacion:['Expedientes • Reparación / Devoluciones','Expedientes • Reparación / Equipos en servicio'],calidad:['Expedientes • Calidad / Devoluciones','Expedientes • Calidad / Equipos en servicio'],facturacion:['Facturas pendientes','Facturas creadas']};
+const locations={devoluciones:['Devoluciones en proceso','Retiros','Devoluciones cerradas'],reparacion:['Expedientes • Reparación / Devoluciones','Expedientes • Reparación / Equipos en servicio'],calidad:['Expedientes • Calidad / Equipos en servicio'],facturacion:['Facturas pendientes','Facturas creadas']};
 const routes=[['devoluciones',0,'En proceso de devolución'],['devoluciones',0,'En proceso de devolución'],['reparacion',1,'Reparación'],['devoluciones',2,'Reembolso parcial']];
 function normalizeWorkflowState(state){
- if((state.workflowVersion||1)>=2)return state;
- state.records=state.records.map(r=>['reparacion','calidad'].includes(r.module)?{...r,index:r.index===2?1:0}:r);
- state.workflowVersion=2;
+ const version=state.workflowVersion||1;
+ if(version<2)state.records=state.records.map(r=>['reparacion','calidad'].includes(r.module)?{...r,index:r.index===2?1:0}:r);
+ if(version<3)state.records=state.records.map(r=>r.module==='calidad'?(r.type===2?{...r,index:0}:{...r,module:'reparacion',index:0,archived:true,archivedAt:r.archivedAt||r.updatedAt||r.date,resolution:r.resolution||'Archivado · Devolución procesada'}):r);
+ state.workflowVersion=3;
  return state;
 }
 function createBusinessStore(initialState,actorId){
@@ -326,6 +328,7 @@ function createBusinessStore(initialState,actorId){
  function allowed(u,module,action){return u.role==='admin'||Boolean(u.permissions?.[module]?.view&&(action==='view'||u.permissions[module].edit));}
  function authorize(module,action='view'){const u=actor();if(!allowed(u,module,action))throw Error('No tienes permiso para esta acción.');return u;}
  function admin(){const u=actor();if(u.role!=='admin')throw Error('Solo el administrador puede realizar esta acción.');return u;}
+ function protectedRecord(r,u=actor()){const copy={...r};if(u.role!=='admin'&&!u.permissions?.reparacion?.edit&&!u.permissions?.calidad?.edit)delete copy.devicePassword;return copy;}
  function log(next,u,action,id){next.audit.push({at:new Date().toISOString(),userId:u.id,action,id});}
  function userInput(input){const username=String(input.username||'').trim().toLowerCase();const name=String(input.name||'').trim();if(!/^[a-z0-9._-]{3,50}$/.test(username)||!name||name.length>100)throw Error('Indica un nombre y un usuario válido de 3 a 50 caracteres (letras, números, punto, guion).');if(!['admin','agent','viewer','technician','intake','quality'].includes(input.role))throw Error('Selecciona un rol válido.');const permissions=Object.fromEntries(modules.map(m=>[m,{view:Boolean(input.permissions?.[m]?.view),edit:input.role!=='viewer'&&Boolean(input.permissions?.[m]?.view&&input.permissions?.[m]?.edit)}]));return {username,name,role:input.role,permissions};}
  function recordInput(input,legacy=false){
@@ -344,12 +347,13 @@ function createBusinessStore(initialState,actorId){
  for(const f of [{reason:input.reason,component,specificReasons},...additionalFaults]){if(f.component){const reported=claimComponents.isReported(f.reason,date)&&(!legacy||input.claimClassification==='reported-problem'||claimComponents.reportedCategories().includes(f.component)),options=reported?claimComponents.reportedSpecifics(f.component):claimComponents.specifics(f.reason,f.component);if(f.specificReasons.some(value=>!options.includes(value)&&!(options.includes('Otro')&&value.startsWith('Otro: '))))throw Error('Revisa el componente y la falla específica.');}}
  if(!legacy){for(const f of [{reason:input.reason,component},...additionalFaults])if(claimComponents.isReported(f.reason,date)&&!f.component)throw Error('Selecciona el problema reportado por el cliente.');for(const f of additionalFaults)if(claimComponents.isReported(f.reason,date))f.claimClassification='reported-problem';}
  let productUrl=null;if(input.productUrl){const raw=text(input.productUrl,2048,false);let url;try{url=new URL(raw);}catch{throw Error('Enlace del producto inválido.');}if(!['https:','http:'].includes(url.protocol)||url.username||url.password)throw Error('Enlace del producto inválido.');productUrl=url.href;}
- const serial=text(input.serial,150,receivedOnRegistration);const receivedOutcome=receivedOnRegistration&&t===0?input.receivedOutcome:null;if(receivedOnRegistration&&t===0&&!['buyer','rematech'].includes(receivedOutcome))throw Error('Selecciona la resolución del reclamo: Reembolso al comprador o Cerrado a favor de Rematech.');
- return {type:t,claimClassification:!legacy&&claimComponents.isReported(input.reason,date)?'reported-problem':null,receivedOutcome,responsibleArea,specificReasons,receivedOnRegistration,date,order:text(input.order,100),product:text(input.product,300),productUrl,component,serial,quantity,price,contact,reason:text(input.reason,1000),specificReason:text(specificReasons.join(' · '),10000),customerReason:text(input.customerReason,3000,!legacy),additionalFaults,resolution:route[2],total:t===3?refund:total,orderTotal:total,module:route[0],index:route[1],tag:t===1?'Devolución para cambio':null,refund,percentage,refundMode};
+ const serial=text(input.serial,150,receivedOnRegistration);const receivedOutcome=receivedOnRegistration&&t===0?input.receivedOutcome:null;if(receivedOnRegistration&&t===0&&!['buyer','rematech'].includes(receivedOutcome))throw Error('Selecciona la resolución del reclamo: Reembolso al comprador o Cerrado a favor de Rematech.');const deviceHasPassword=t===2&&input.deviceHasPassword===true,devicePassword=deviceHasPassword?String(input.devicePassword??'').trim():'';if(deviceHasPassword&&!devicePassword)throw Error('Escribe la contraseña del equipo o desmarca la casilla.');if(devicePassword.length>500)throw Error('La contraseña del equipo no puede superar 500 caracteres.');
+ const sourceImportKey=text(input.sourceImportKey,100,false)||null;
+ return {type:t,claimClassification:!legacy&&claimComponents.isReported(input.reason,date)?'reported-problem':null,receivedOutcome,responsibleArea,specificReasons,receivedOnRegistration,date,order:text(input.order,100),product:text(input.product,300),productUrl,component,serial,...(t===2?{deviceHasPassword,devicePassword}:{}),quantity,price,contact,reason:text(input.reason,1000),specificReason:text(specificReasons.join(' · '),10000),customerReason:text(input.customerReason,3000,!legacy),additionalFaults,resolution:route[2],total:t===3?refund:total,orderTotal:total,module:route[0],index:route[1],tag:t===1?'Devolución para cambio':null,refund,percentage,refundMode,...(sourceImportKey?{sourceImportKey}:{})};
  }
  const api={
- faultReportData(input){authorize('dashboard');const validDate=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T12:00:00Z'))&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;if(!input||!validDate(input.from)||!validDate(input.to)||input.from>input.to)throw Error('Selecciona un rango de fechas válido.');if(input.area&&!['Empaque - Logística','Ecommerce - Marketing','Cliente','Acondicionamiento','Paquetería','Sin área asignada'].includes(input.area))throw Error('Selecciona un área válida.');return structuredClone(data.records.filter(r=>r.date>=input.from&&r.date<=input.to&&(!input.area||(r.responsibleArea||'Sin área asignada')===input.area)));},
- dashboardData(){authorize('dashboard');return {records:structuredClone(data.records),monthlySales:structuredClone(data.monthlySales)};},
+ faultReportData(input){const u=authorize('dashboard');const validDate=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T12:00:00Z'))&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;if(!input||!validDate(input.from)||!validDate(input.to)||input.from>input.to)throw Error('Selecciona un rango de fechas válido.');if(input.area&&!['Empaque - Logística','Ecommerce - Marketing','Cliente','Acondicionamiento','Paquetería','Sin área asignada'].includes(input.area))throw Error('Selecciona un área válida.');return structuredClone(data.records.filter(r=>r.date>=input.from&&r.date<=input.to&&(!input.area||(r.responsibleArea||'Sin área asignada')===input.area)).map(r=>protectedRecord(r,u)));},
+ dashboardData(){const u=authorize('dashboard');return {records:structuredClone(data.records.map(r=>protectedRecord(r,u))),monthlySales:structuredClone(data.monthlySales)};},
  listMonthlySales(){authorize('configuracion');return structuredClone(data.monthlySales);},
  saveMonthlySales(input){const u=authorize('configuracion','edit');if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(input.month))||Number(input.month.slice(0,4))<2000||Number(input.month.slice(0,4))>2100)throw Error('Selecciona un mes válido.');const channels=['Shopify','Mercado Libre','Amazon','Coppel','Walmart'];const totals=Object.fromEntries(channels.map(c=>{const value=input.totals?.[c];if(!Number.isSafeInteger(value)||value<0||value>1000000000000)throw Error('Revisa los totales de ventas.');return [c,value];}));const next=structuredClone(data),existing=next.monthlySales.find(r=>r.month===input.month);const entry={month:input.month,totals,updatedAt:new Date().toISOString(),updatedBy:u.name};if(existing)Object.assign(existing,entry);else next.monthlySales.push({...entry,createdAt:entry.updatedAt});log(next,u,'monthly-sales-save',input.month);persist(next);return this.listMonthlySales();},
  status(){return {setupRequired:!data.users.length};},
@@ -357,11 +361,11 @@ function createBusinessStore(initialState,actorId){
  login(input){const key=String(input.username||'').trim().toLowerCase();const a=attempts.get(key)||{count:0,until:0};if(a.until>Date.now())throw Error('Demasiados intentos. Espera un minuto.');const u=data.users.find(u=>u.username===key&&u.active);if(!u||!verify(input.password,u)){a.count++;if(a.count>=5){a.until=Date.now()+60000;a.count=0;}attempts.set(key,a);throw Error('Usuario o contraseña incorrectos.');}attempts.delete(key);session=u.id;return publicUser(u);},
  logout(){session=null;return true;},
  changePassword(input){const u=data.users.find(u=>u.id===session&&u.active);if(!u||!verify(input.currentPassword,u))throw Error('Contraseña actual incorrecta.');if(input.currentPassword===input.password)throw Error('Elige una contraseña diferente.');const next=structuredClone(data),target=next.users.find(x=>x.id===u.id);Object.assign(target,password(input.password),{mustChangePassword:false});log(next,u,'password-change',u.id);persist(next);return publicUser(target);},
- listRecords(){const u=actor();return data.records.filter(r=>allowed(u,r.module,'view')).map(r=>({...r,location:(locations[r.module]?.[r.index]||r.module)+(r.archived?' · Archivado':'')}));},
+ listRecords(){const u=actor();return data.records.filter(r=>allowed(u,r.module,'view')).map(r=>({...protectedRecord(r,u),location:(locations[r.module]?.[r.index]||r.module)+(r.archived?' · Archivado':'' )}));},
  saveRecords(input){const u=authorize('registros','edit');if(!Array.isArray(input)||!input.length||input.length>100)throw Error('Agrega entre 1 y 100 registros por lote.');const entries=input.map((item,i)=>{try{if(item.editId)throw Error('Solo se pueden agregar registros nuevos.');const r=recordInput(item);authorize(r.module,'edit');return r;}catch(err){throw Error('Registro '+(i+1)+': '+err.message);}});const next=structuredClone(data);for(const r of entries){const id=randomUUID();next.records.unshift({...r,id,expedientNumber:next.nextNumber++,createdAt:new Date().toISOString(),...(r.receivedOnRegistration?{receipt:{receivedAt:new Date().toISOString(),receivedBy:u.id},...(r.type===0?{closure:{outcome:r.receivedOutcome,fullAction:null,withdrawalNumber:null,closedAt:new Date().toISOString(),closedBy:u.id}}:{}),}:{})});log(next,u,'record-create',id);}persist(next);return this.listRecords();},
  saveRecord(input){const u=authorize('registros','edit');const r=recordInput(input);authorize(r.module,'edit');const next=structuredClone(data);if(input.editId){throw Error('La información general del expediente es de solo lectura.');}else{const id=randomUUID();next.records.unshift({...r,id,expedientNumber:next.nextNumber++,createdAt:new Date().toISOString(),...(r.receivedOnRegistration?{receipt:{receivedAt:new Date().toISOString(),receivedBy:u.id},...(r.type===0?{closure:{outcome:r.receivedOutcome,fullAction:null,withdrawalNumber:null,closedAt:new Date().toISOString(),closedBy:u.id}}:{}),}:{})});log(next,u,'record-create',id);}persist(next);return this.listRecords();},
  confirmReceipt(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='devoluciones'||old.index!==1)throw Error('La recepción solo se confirma en Retiros.');const u=authorize('devoluciones','edit');if(input.receivedHere!==true)throw Error('Confirma que el equipo ya fue recibido.');if(old.receipt)return this.listRecords();const next=structuredClone(data),r=next.records.find(r=>r.id===old.id);r.receipt={receivedAt:new Date().toISOString(),receivedBy:u.id};log(next,u,'equipment-received',r.id);persist(next);return this.listRecords();},
- receiveExchange(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.type!==1||old.module!=='devoluciones'||old.index!==0)throw Error('Solo se pueden recibir cambios de equipo en Devoluciones en proceso.');const u=authorize('devoluciones','edit');authorize('reparacion','edit');if(input.receivedHere!==true)throw Error('Confirma que el equipo ya está aquí.');if(input.exchangeCompleted!==true)throw Error('Confirma que se efectuó el cambio de equipo.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id),at=new Date().toISOString();r.receipt={receivedAt:at,receivedBy:u.id};r.returnMitigated=true;r.exchange={completedAt:at,completedBy:u.id};r.module='reparacion';r.index=0;r.resolution='Reparación';r.updatedAt=at;log(next,u,'exchange-received-and-sent-to-repair',r.id);persist(next);return {records:this.listRecords(),module:r.module,index:r.index};},
+ receiveExchange(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.type!==1||old.module!=='devoluciones'||old.index!==0)throw Error('Solo se pueden recibir cambios de equipo en Devoluciones en proceso.');const u=authorize('devoluciones','edit');authorize('reparacion','edit');if(input.receivedHere!==true)throw Error('Confirma que el equipo ya está aquí.');if(input.exchangeCompleted!==true)throw Error('Confirma que se efectuó el cambio de equipo.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id),at=new Date().toISOString();r.receipt={receivedAt:at,receivedBy:u.id};r.returnMitigated=true;r.exchange={...(r.exchange||{}),completedAt:at,completedBy:u.id};r.module='reparacion';r.index=0;r.resolution='Reparación';r.updatedAt=at;log(next,u,'exchange-received-and-sent-to-repair',r.id);persist(next);return {records:this.listRecords(),module:r.module,index:r.index};},
  receiveAndSend(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='devoluciones'||old.index!==1)throw Error('Solo se pueden enviar equipos desde Retiros.');const u=authorize('devoluciones','edit');authorize('reparacion','edit');if(input.receivedHere!==true)throw Error('Confirma que el equipo ya fue recibido.');const serial=String(input.serial||'').trim();if(!serial||serial.length>150)throw Error('Indica un número de serie / SN de hasta 150 caracteres.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id),at=new Date().toISOString();r.receipt=r.receipt||{receivedAt:at,receivedBy:u.id};r.serial=serial;r.module=r.type===1?'devoluciones':'reparacion';r.index=0;r.resolution=r.type===1?'Cambio de equipo pendiente de confirmar':'Reparación';r.updatedAt=at;log(next,u,'receive-and-send-to-repair',r.id);persist(next);return {records:this.listRecords(),module:r.module,index:r.index};},
  saveIdentifier(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='devoluciones'||old.index!==1||!old.receipt)throw Error('El número de serie o barcode solo se modifica en Retiros después de recibir el equipo.');const u=authorize('devoluciones','edit');const serial=String(input.serial||'').trim();if(!serial||serial.length>150)throw Error('Indica un número de serie o barcode de hasta 150 caracteres.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id);r.serial=serial;r.updatedAt=new Date().toISOString();log(next,u,'identifier-update',r.id);persist(next);return this.listRecords();},
  listTechnicians(){authorize('reparacion');return data.users.filter(u=>u.active&&u.role==='technician').map(u=>({id:u.id,name:u.name}));},
@@ -369,9 +373,9 @@ function createBusinessStore(initialState,actorId){
  addRecordComment(input){const old=data.records.find(r=>r.id===input?.id);if(!old)throw Error('Expediente no encontrado.');const u=authorize(old.module);const body=String(input.message||'').trim(),recipientIds=[...new Set(Array.isArray(input.recipientIds)?input.recipientIds.map(String):[])];if(!body||body.length>3000)throw Error('Escribe un mensaje de hasta 3000 caracteres.');if(!recipientIds.length||recipientIds.length>20)throw Error('Selecciona de 1 a 20 usuarios para notificar.');const targets=recipientIds.map(id=>data.users.find(target=>target.id===id&&target.active&&allowed(target,old.module,'view')));if(targets.some(target=>!target))throw Error('Uno de los destinatarios ya no tiene acceso a este expediente.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id),at=new Date().toISOString(),comment={id:randomUUID(),authorId:u.id,authorName:u.name,message:body,recipientIds,createdAt:at};r.comments=[...(r.comments||[]),comment];for(const target of targets){if(target.id===u.id)continue;next.notifications.push({id:randomUUID(),kind:'record-comment',recordId:r.id,expedientNumber:r.expedientNumber,order:r.order,authorId:u.id,authorName:u.name,message:body,recipientId:target.id,createdAt:at,readBy:[]});}log(next,u,'record-comment',r.id);persist(next);return this.listRecords();},
  listNotifications(){const u=actor();return data.notifications.filter(n=>(n.recipientId?n.recipientId===u.id:u.role==='admin')&&data.records.some(r=>r.id===n.recordId&&allowed(u,r.module,'view'))).map(n=>({...n,read:!!n.readBy?.includes(u.id)})).reverse();},
  readNotification(id){const u=actor(),n=data.notifications.find(n=>n.id===id);if(!n||(n.recipientId?n.recipientId!==u.id:u.role!=='admin'))throw Error('Notificación no encontrada.');const record=data.records.find(r=>r.id===n.recordId);if(!record||!allowed(u,record.module,'view'))throw Error('No tienes acceso a este expediente.');const next=structuredClone(data),target=next.notifications.find(n=>n.id===id);target.readBy=[...new Set([...(target.readBy||[]),u.id])];persist(next);return this.listNotifications();},
- saveRepair(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='reparacion')throw Error('El equipo debe estar en el área de reparación para capturar estos datos.');const u=authorize('reparacion','edit');if(!['admin','technician'].includes(u.role))throw Error('La información técnica requiere el rol Reparación / Técnico.');const technician=data.users.find(t=>t.active&&t.role==='technician'&&t.id===(u.role==='technician'?u.id:input.technicianId));if(!technician)throw Error('Selecciona un usuario activo con rol Reparación / Técnico.');const text=(v,max)=>{const value=String(v||'').trim();if(value.length>max)throw Error('El texto excede la longitud permitida.');return value;};const failedComponents=Array.isArray(input.failedComponents)?[...new Set(input.failedComponents)]:[];const components=['Pantalla','Teclado','Batería','Cargador','RAM','SSD / Disco duro','Tarjeta madre','Procesador','Wi-Fi / Bluetooth','Puertos USB / HDMI','Cámara / Micrófono','Bocinas','Ventilador / Refrigeración','Carcasa / Bisagras','Otro'];if(failedComponents.some(c=>!components.includes(c)))throw Error('Componente inválido.');const repair={technician:technician.name,technicianId:technician.id,failedComponents,receivedDate:text(input.receivedDate,10),diagnosis:text(input.diagnosis,3000),work:text(input.work,3000),parts:text(input.parts,2000),result:text(input.result,100),notes:text(input.notes,3000),updatedAt:new Date().toISOString(),updatedBy:u.id};if(!repair.diagnosis)throw Error('Indica el diagnóstico.');if(repair.receivedDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(repair.receivedDate)||new Date(repair.receivedDate+'T12:00:00Z').toISOString().slice(0,10)!==repair.receivedDate))throw Error('Fecha de ingreso inválida.');if(!['En diagnóstico','Cambio de equipo','Se requiere pza','No reparable','No entra en garantía','Reparado'].includes(repair.result))throw Error('Resultado de reparación inválido.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id);r.repair=repair;r.updatedAt=repair.updatedAt;if(repair.result==='Reparado'){r.module='calidad';r.resolution='Pendiente de validación de Calidad';r.sentToQualityAt=repair.updatedAt;log(next,u,'send-to-quality',r.id);}else if(repair.result==='Cambio de equipo'){r.originalType??=r.type;r.type=1;r.tag='Devolución para cambio';r.returnMitigated=false;r.module='devoluciones';r.index=0;r.resolution='Cambio de equipo pendiente de confirmar';log(next,u,'repair-equipment-change',r.id);}else r.resolution=repair.result==='En diagnóstico'?'Reparación · En diagnóstico':repair.result;
+ saveRepair(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='reparacion'||old.archived)throw Error(old?.archived?'El expediente está archivado y no admite cambios.':'El equipo debe estar en el área de reparación para capturar estos datos.');const u=authorize('reparacion','edit');if(!['admin','technician'].includes(u.role))throw Error('La información técnica requiere el rol Reparación / Técnico.');const technician=data.users.find(t=>t.active&&t.role==='technician'&&t.id===(u.role==='technician'?u.id:input.technicianId));if(!technician)throw Error('Selecciona un usuario activo con rol Reparación / Técnico.');const text=(v,max)=>{const value=String(v||'').trim();if(value.length>max)throw Error('El texto excede la longitud permitida.');return value;};const failedComponents=Array.isArray(input.failedComponents)?[...new Set(input.failedComponents)]:[];const components=['Pantalla','Teclado','Batería','Cargador','RAM','SSD / Disco duro','Tarjeta madre','Procesador','Wi-Fi / Bluetooth','Puertos USB / HDMI','Cámara / Micrófono','Bocinas','Ventilador / Refrigeración','Carcasa / Bisagras','Otro'];if(failedComponents.some(c=>!components.includes(c)))throw Error('Componente inválido.');const repair={technician:technician.name,technicianId:technician.id,failedComponents,receivedDate:text(input.receivedDate,10),diagnosis:text(input.diagnosis,3000),work:text(input.work,3000),parts:text(input.parts,2000),result:text(input.result,100),notes:text(input.notes,3000),updatedAt:new Date().toISOString(),updatedBy:u.id};if(!repair.diagnosis)throw Error('Indica el diagnóstico.');if(repair.receivedDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(repair.receivedDate)||new Date(repair.receivedDate+'T12:00:00Z').toISOString().slice(0,10)!==repair.receivedDate))throw Error('Fecha de ingreso inválida.');if(!['En diagnóstico','Cambio de equipo','Se requiere pza','No reparable','No entra en garantía','Reparado'].includes(repair.result))throw Error('Resultado de reparación inválido.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id);r.repair=repair;r.updatedAt=repair.updatedAt;r.archived=false;delete r.archivedAt;if(repair.result==='Reparado'){if(r.type===2){r.module='calidad';r.index=0;r.resolution='Pendiente de validación de Calidad';r.sentToQualityAt=repair.updatedAt;log(next,u,'send-to-quality',r.id);}else{r.module='reparacion';r.index=0;r.archived=true;r.archivedAt=repair.updatedAt;r.resolution='Archivado · Reparación completada';log(next,u,'repair-return-archive',r.id);}}else if(repair.result==='Cambio de equipo'){r.originalType??=r.type;r.type=1;r.tag='Devolución para cambio';r.returnMitigated=false;r.exchange={startedAt:repair.updatedAt,startedBy:u.id};r.module='devoluciones';r.index=0;r.resolution='Cambio de equipo pendiente de confirmar';log(next,u,'repair-equipment-change',r.id);}else r.resolution=repair.result==='En diagnóstico'?'Reparación · En diagnóstico':repair.result;
  if(repair.result!=='En diagnóstico'){next.notifications.push({id:randomUUID(),recordId:r.id,expedientNumber:r.expedientNumber,order:r.order,technician:technician.name,result:repair.result,createdAt:repair.updatedAt,readBy:[]});}log(next,u,'repair-update',r.id);persist(next);return {records:this.listRecords(),module:r.module,index:r.index};},
- validateQuality(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='calidad'||old.archived)throw Error('Solo se pueden validar expedientes pendientes en Calidad.');const u=authorize('calidad','edit');if(!['approved','rejected'].includes(input.result))throw Error('Selecciona el resultado de la validación.');const notes=String(input.notes||'').trim();if(notes.length>3000)throw Error('Máximo 3000 caracteres en observaciones.');if(input.result==='approved'&&input.functioning!==true)throw Error('Confirma que probaste el equipo y funciona correctamente.');if(input.result==='rejected'&&!notes)throw Error('Describe las fallas encontradas para devolver el equipo a Reparación.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id),at=new Date().toISOString();const validation={result:input.result,notes,functioning:input.functioning===true,validatedAt:at,validatedBy:u.id,reviewer:u.name};r.quality=validation;r.qualityHistory=[...(r.qualityHistory||[]),validation];r.updatedAt=at;if(input.result==='approved'){r.archived=true;r.archivedAt=at;r.resolution='Archivado · Calidad aprobada';}else{r.module='reparacion';r.resolution='Reparación · No aprobado en Calidad';r.repair={...r.repair,result:'En diagnóstico'};}log(next,u,input.result==='approved'?'quality-approve-and-archive':'quality-return-to-repair',r.id);persist(next);return {records:this.listRecords(),module:r.module,index:r.index};},
+ validateQuality(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='calidad'||old.archived||old.type!==2)throw Error('Solo se pueden validar expedientes de servicio pendientes en Calidad.');const u=authorize('calidad','edit');if(!['approved','rejected'].includes(input.result))throw Error('Selecciona el resultado de la validación.');const notes=String(input.notes||'').trim();if(notes.length>3000)throw Error('Máximo 3000 caracteres en observaciones.');if(input.result==='approved'&&input.functioning!==true)throw Error('Confirma que probaste el equipo y funciona correctamente.');if(input.result==='rejected'&&!notes)throw Error('Describe las fallas encontradas para devolver el equipo a Reparación.');const next=structuredClone(data),r=next.records.find(r=>r.id===old.id),at=new Date().toISOString();const validation={result:input.result,notes,functioning:input.functioning===true,validatedAt:at,validatedBy:u.id,reviewer:u.name};r.quality=validation;r.qualityHistory=[...(r.qualityHistory||[]),validation];r.updatedAt=at;if(input.result==='approved'){r.archived=true;r.archivedAt=at;r.resolution='Archivado · Calidad aprobada';}else{r.module='reparacion';r.index=1;r.resolution='Reparación · No aprobado en Calidad';r.repair={...r.repair,result:'En diagnóstico'};}log(next,u,input.result==='approved'?'quality-approve-and-archive':'quality-return-to-repair',r.id);persist(next);return {records:this.listRecords(),module:r.module,index:r.index};},
  closeReturn(input){const old=data.records.find(r=>r.id===input.id);if(!old||old.module!=='devoluciones'||old.index!==0||old.type!==0)throw Error('Solo se puede cerrar una devolución en proceso.');const u=authorize('devoluciones','edit');if(!['rematech','buyer'].includes(input.outcome))throw Error('Selecciona el resultado del cierre.');let withdrawal=null,index=2,resolution='Cerrado a favor de Rematech',fullAction=null;if(input.outcome==='buyer'){if(!['withdrawal','return'].includes(input.fullAction))throw Error('Selecciona Retiro Full o Regreso a Full.');fullAction=input.fullAction;if(fullAction==='withdrawal'){withdrawal=String(input.withdrawalNumber||'').trim();if(!withdrawal||withdrawal.length>100)throw Error('Indica el número de retiro.');index=1;resolution='Cerrado con reembolso al comprador · Retiro Full';}else resolution='Cerrado con reembolso al comprador · Regreso a Full';}const next=structuredClone(data),r=next.records.find(r=>r.id===old.id);r.index=index;r.resolution=resolution;r.closure={outcome:input.outcome,fullAction,withdrawalNumber:withdrawal,closedAt:new Date().toISOString(),closedBy:u.id};r.updatedAt=r.closure.closedAt;log(next,u,'return-close',r.id);persist(next);return {records:this.listRecords(),module:r.module,index:r.index};},
  deleteRecord(id){const u=admin();const old=data.records.find(r=>r.id===id);if(!old)throw Error('El expediente ya no existe.');const next=structuredClone(data);next.records=next.records.filter(r=>r.id!==id);log(next,u,'record-delete',id);persist(next);return this.listRecords();},
  migrateRecords(rows){const u=admin();if(data.migrated)return this.listRecords();if(!Array.isArray(rows)||rows.length>10000)throw Error('Registros anteriores inválidos.');const normalized=rows.map((row,i)=>({...recordInput(row,true),id:typeof row.id==='string'?row.id:randomUUID(),expedientNumber:rows.length-i}));if(new Set(normalized.map(r=>r.id)).size!==normalized.length)throw Error('Hay identificadores duplicados en los registros anteriores.');const next=structuredClone(data);next.records=[...normalized,...next.records];next.nextNumber=Math.max(next.nextNumber,normalized.length+1);next.migrated=true;log(next,u,'legacy-import',String(rows.length));persist(next);return this.listRecords();},
@@ -747,6 +751,103 @@ async function sheetsRequest(path,options={}){
  if(!response.ok)throw Error(response.status===403?'Sheets rechazó el acceso. Revisa el permiso del archivo y que la API de Sheets esté habilitada.':'No se pudo consultar o guardar el histórico en Sheets.');
  return response.json();
 }
+async function writeIntakeValues(data){
+ if(!data.length)return;
+ await sheetsRequest('/values:batchUpdate',{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data})});
+}
+async function clearIntakeRows(rowNumbers){
+ if(!rowNumbers.length)return;
+ const ranges=rowNumbers.flatMap(rowNumber=>[
+  `'${SHEET_INTAKE.name}'!A${rowNumber}:AB${rowNumber}`,
+  `'${SHEET_INTAKE.name}'!AG${rowNumber}:AL${rowNumber}`,
+  `'${SHEET_INTAKE.name}'!AE${rowNumber}:AF${rowNumber}`,
+ ]);
+ await sheetsRequest('/values:batchClear',{method:'POST',body:JSON.stringify({ranges})});
+}
+async function appendIntakeHistory(results){
+ const completed=results.filter(item=>item.status==='Sincronizado'&&item.folio&&item.sourceImportKey);
+ if(!completed.length)return;
+ const existing=await sheetsRequest(`/values/${encodeURIComponent("'Historial de cargas'!B2:B")}?valueRenderOption=UNFORMATTED_VALUE`);
+ const known=new Set((existing.values||[]).flat().map(String));
+ const pending=completed.filter(item=>!known.has(item.folio));
+ if(!pending.length)return;
+ await sheetsRequest(`/values/${encodeURIComponent("'Historial de cargas'!A:I")}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',body:JSON.stringify({majorDimension:'ROWS',values:pending.map(item=>[new Date().toISOString(),item.folio,item.order,item.product,item.type,item.destination,item.date,'Sincronizado',item.total/100])})});
+}
+async function intakeKey(row,rowNumber){
+ const existing=String(row[SHEET_INTAKE.columns.key]||'').trim();
+ if(existing)return existing;
+ return `cxsheet-${rowNumber}-${crypto.randomUUID()}`;
+}
+async function loadSheetIntakeRows(){
+ const sheetRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${SHEET_INTAKE.firstDataRow}:AL${SHEET_INTAKE.firstDataRow+SHEET_INTAKE.maxRows-1}`);
+ const response=await sheetsRequest(`/values/${sheetRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
+ return Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}));
+}
+async function intakeSnapshot(rows){
+ const data=rows.filter(({row})=>rowHasInput(row)).map(({row,rowNumber})=>[rowNumber,...row.slice(1,28),...row.slice(32,38)]);
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));
+ return [...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
+}
+async function previewSheetIntakeRows(business,actorId){
+ const rows=await loadSheetIntakeRows(),previewStore=createBusinessStore(structuredClone(business.getState()),actorId);
+ const seen=new Set(),results=[];
+ for(const {row,rowNumber} of rows){
+  if(!rowHasInput(row))continue;
+  const sourceImportKey=String(row[SHEET_INTAKE.columns.key]||'').trim()||`preview-${rowNumber}`;
+  if(seen.has(sourceImportKey)){results.push({row:rowNumber,valid:false,error:'Clave de carga repetida en la hoja.'});continue;}seen.add(sourceImportKey);
+  const existing=business.getState().records.find(record=>record.sourceImportKey===sourceImportKey);
+  if(existing){results.push({row:rowNumber,valid:true,alreadySynced:true,folio:`EXP-${String(existing.expedientNumber).padStart(3,'0')}`,order:existing.order,product:existing.product,type:['Devolución','Cambio de equipo','Servicio','Reembolso parcial'][existing.type],destination:`${existing.module} · ${existing.index===0?'En proceso':existing.index===1?'Expedientes · Devoluciones':'Equipos en servicio'}`});continue;}
+  try{
+   const mapped=mapSheetRecord(row,sourceImportKey),saved=previewStore.api.saveRecord(mapped),record=saved.find(item=>item.sourceImportKey===sourceImportKey);
+   if(!record)throw Error('No se pudo validar el registro.');
+   const [module,detail]=routeSheetRecord(record);
+   results.push({row:rowNumber,valid:true,folio:'Automático al sincronizar',order:record.order,product:record.product,type:['Devolución','Cambio de equipo','Servicio','Reembolso parcial'][record.type],destination:`${module} · ${detail}`,total:record.total});
+  }catch(error){results.push({row:rowNumber,valid:false,order:String(row[SHEET_INTAKE.columns.order]||''),product:String(row[SHEET_INTAKE.columns.product]||''),error:String(error.message||'Verifica los campos.').slice(0,220)});}
+ }
+ return {rows:results,snapshot:await intakeSnapshot(rows),summary:{total:results.length,ready:results.filter(row=>row.valid&&!row.alreadySynced).length,alreadySynced:results.filter(row=>row.alreadySynced).length,needsReview:results.filter(row=>!row.valid).length}};
+}
+async function syncSheetIntakeRows(business,expectedSnapshot){
+ const rows=await loadSheetIntakeRows(),candidates=[];
+ if(!expectedSnapshot||await intakeSnapshot(rows)!==expectedSnapshot)throw Error('La hoja cambió después de la revisión. Vuelve a validar la captura antes de sincronizar.');
+ for(const {row,rowNumber} of rows){
+  if(!rowHasInput(row))continue;
+  candidates.push({row,rowNumber,sourceImportKey:await intakeKey(row,rowNumber)});
+ }
+ const keyWrites=[];
+ for(const entry of candidates){
+  if(String(entry.row[SHEET_INTAKE.columns.key]||'').trim()!==entry.sourceImportKey){
+   entry.row[SHEET_INTAKE.columns.key]=entry.sourceImportKey;
+   keyWrites.push({range:`'${SHEET_INTAKE.name}'!A${entry.rowNumber}`,majorDimension:'ROWS',values:[[entry.sourceImportKey]]});
+  }
+ }
+ // Persist idempotency keys before committing records. A retry after a network
+ // timeout can then recognize an already-created case instead of duplicating it.
+ await writeIntakeValues(keyWrites);
+ const seen=new Set(),statusUpdates=[],clearRows=[],summary={imported:0,alreadySynced:0,needsReview:0,results:[]};
+ for(const entry of candidates){
+  const key=entry.sourceImportKey,existingKey=seen.has(key);seen.add(key);
+  let status='',folio='';
+  if(existingKey){status='Revisar: clave de carga repetida en la hoja.';summary.needsReview++;}
+  else{
+   const existing=business.getState().records.find(record=>record.sourceImportKey===key);
+   if(existing){status='Sincronizado';folio=`EXP-${String(existing.expedientNumber).padStart(3,'0')}`;summary.alreadySynced++;clearRows.push(entry.rowNumber);}
+   else{
+    try{
+     const mapped=mapSheetRecord(entry.row,key);
+     business.api.saveRecord(mapped);
+     const imported=business.getState().records.find(record=>record.sourceImportKey===key);
+     if(!imported)throw Error('No se confirmó el alta del expediente.');
+     status='Sincronizado';folio=`EXP-${String(imported.expedientNumber).padStart(3,'0')}`;summary.imported++;clearRows.push(entry.rowNumber);
+    }catch(error){status=`Revisar: ${String(error.message||'Verifica los campos.').slice(0,220)}`;summary.needsReview++;}
+   }
+  }
+  if(!clearRows.includes(entry.rowNumber))statusUpdates.push({range:`'${SHEET_INTAKE.name}'!AE${entry.rowNumber}:AF${entry.rowNumber}`,majorDimension:'ROWS',values:[[status,folio]]});
+  const imported=business.getState().records.find(record=>record.sourceImportKey===key);
+  const [destinationModule,destinationDetail]=imported?routeSheetRecord(imported):['',''];
+  summary.results.push({row:entry.rowNumber,status,folio,sourceImportKey:key,order:imported?.order||String(entry.row[SHEET_INTAKE.columns.order]||''),product:imported?.product||String(entry.row[SHEET_INTAKE.columns.product]||''),type:imported?['Devolución','Cambio de equipo','Servicio','Reembolso parcial'][imported.type]:'',destination:destinationModule?`${destinationModule} · ${destinationDetail}`:'',date:imported?.date||'',total:imported?.total||0});
+ }
+ return {summary,statusUpdates,clearRows};
+}
 const historicalStore=createTieredState(createSheetsObjects(sheetsRequest));
 const hydrateWorkspace=async state=>state.archive?historicalStore.hydrate(state):structuredClone(state);
 // Archive is explicitly activated by an administrator after verification.
@@ -761,11 +862,12 @@ async function archiveConnectionTest(){
 }
 
 import {createClient} from 'npm:@supabase/supabase-js@2.117.3';
-const readMethods=new Set(['listRecords','listMonthlySales','dashboardData','faultReportData','listTechnicians','listCommentUsers','listNotifications']);
-const writeMethods=new Set(['saveRecord','saveRecords','deleteRecord','saveRepair','addRecordComment','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','saveMonthlySales']);
+const readMethods=new Set(['listRecords','listMonthlySales','dashboardData','faultReportData','listTechnicians','listCommentUsers','listNotifications','previewSheetIntake']);
+const writeMethods=new Set(['syncSheetIntake','deleteRecord','saveRepair','addRecordComment','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','saveMonthlySales']);
 // Keep older installed clients readable while they receive the new navigation.
-function legacyWorkflowResult(value,input){
- const convert=r=>{if(!r||!['reparacion','calidad'].includes(r.module))return r;const index=r.type===2?2:r.type===1?1:0;return {...r,index,location:`Expedientes • ${r.module==='calidad'?'Calidad':'Reparación'} / ${index===2?'Equipos en servicio':index===1?'Cambio de equipo':'Devoluciones'}${r.archived?' · Archivado':''}`};};
+function legacyWorkflowResult(value,input,clientVersion){
+ const clientUsesTenNavigation=/^0\.10\./.test(String(clientVersion||''));
+ const convert=r=>{if(!r||!['reparacion','calidad'].includes(r.module))return r;const index=clientUsesTenNavigation?(r.type===2?1:r.index):(r.type===2?2:r.type===1?1:0);return {...r,index,location:`Expedientes • ${r.module==='calidad'?'Calidad':'Reparación'} / ${clientUsesTenNavigation?(r.type===2?'Equipos en servicio':'Devoluciones'):(index===2?'Equipos en servicio':index===1?'Cambio de equipo':'Devoluciones')}${r.archived?' · Archivado':''}`};};
  if(Array.isArray(value))return value.map(convert);
  if(value&&Array.isArray(value.records)){const target=value.records.find(r=>r.id===input?.id),result={...value,records:value.records.map(convert)};if(target&&Number.isInteger(value.index))result.index=convert(target).index;return result;}
  return value;
@@ -779,7 +881,7 @@ Deno.serve(async req=>{
  const url=Deno.env.get('SUPABASE_URL'),anon=Deno.env.get('SUPABASE_ANON_KEY'),secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
  const auth=createClient(url,anon,{global:{headers:{Authorization:token}},auth:{persistSession:false}});
  const {data:authData,error:authError}=await auth.auth.getUser();if(authError||!authData.user)return reply({error:'Sesión inválida.'},401);
- const service=createClient(url,secret,{auth:{persistSession:false}}),body=await req.json(),{method,input,clientVersion}=body;const [clientMajor,clientMinor]=String(clientVersion||'0.0').split('.').map(Number),modernClient=clientMajor>0||clientMinor>=10;
+ const service=createClient(url,secret,{auth:{persistSession:false}}),body=await req.json(),{method,input,clientVersion}=body;const [clientMajor,clientMinor,clientPatch]=String(clientVersion||'0.0.0').split('.').map(Number),modernClient=clientMajor>0||clientMinor>10||clientMinor===10&&(clientPatch||0)>=12;
  const fetchProfiles=async()=>{const {data,error}=await service.from('cx_profiles').select('*');if(error)throw Error('No se pudo leer la configuración de usuarios.');return data;};
  let profiles=await fetchProfiles(),profile=profiles.find(p=>p.id===authData.user.id);if(!profile)return reply({error:'No se encontró el perfil.'},403);
  if(method==='getProfile'){
@@ -808,6 +910,24 @@ Deno.serve(async req=>{
  profiles=await fetchProfiles();profile=profiles.find(p=>p.id===authData.user.id);if(!profile?.active||!profile.approved)return reply({error:'Tu cuenta no tiene acceso.'},403);
  const {data:workspace,error}=await service.from('cx_workspace').select('*').eq('id',1).single();if(error)throw Error('No se pudo cargar el espacio compartido.');
  const state={...await hydrateWorkspace(workspace.state),users:profiles.map(userShape)},business=createBusinessStore(state,profile.id);let result;
+ if(method==='syncSheetIntake'){
+  if(profile.role!=='admin'&&!profile.permissions?.registros?.edit)return reply({error:'Necesitas permiso de edición en Carga desde Sheets para sincronizar expedientes.'},403);
+  const sync=await syncSheetIntakeRows(business,input?.snapshot);
+  if(sync.summary.imported){
+   const next=await stageWorkspace(business.getState());next.users=[];
+   const {data:committed,error:commitError}=await service.rpc('cx_commit_state',{expected_version:workspace.version,next_state:next,actor_id:profile.id,expected_profile_updated:profile.updated_at});
+   if(commitError)throw Error('No se pudieron guardar los expedientes sincronizados. Intenta nuevamente; la operación es segura contra duplicados.');
+   if(!committed)continue;
+  }
+  await appendIntakeHistory(sync.summary.results);
+  await writeIntakeValues(sync.statusUpdates);
+  await clearIntakeRows(sync.clearRows);
+  return reply({result:sync.summary});
+ }
+ if(method==='previewSheetIntake'){
+  if(profile.role!=='admin'&&!profile.permissions?.registros?.edit)return reply({error:'Necesitas permiso de edición en Carga desde Sheets para revisar la captura.'},403);
+  return reply({result:await previewSheetIntakeRows(business,profile.id)});
+ }
  if(method==='importLocalData'){
  if(profile.role!=='admin')return reply({error:'Solo el administrador puede importar datos.'},403);
  if(state.records.length)throw Error('La importación inicial solo está disponible cuando el espacio compartido está vacío.');
@@ -815,15 +935,15 @@ Deno.serve(async req=>{
  business.api.migrateRecords(input.records.map(r=>({...r,responsibleArea:r.responsibleArea==='Paquetería - Logística'?'Empaque - Logística':r.responsibleArea})));
  const next=business.getState(),original=new Map(input.records.map(r=>[r.id,r]));
  next.records=next.records.map(r=>{const old=original.get(r.id)||{};const metadata={};for(const k of ['receipt','closure','repair','quality','qualityHistory','archived','archivedAt','createdAt','updatedAt','returnMitigated','sentToQualityAt','receivedOutcome','claimClassification','exchange','originalType'])if(old[k]!==undefined)metadata[k]=old[k];return {...r,...metadata,module:old.module||r.module,index:Number.isInteger(old.index)?old.index:r.index,resolution:old.resolution||r.resolution,expedientNumber:Number.isInteger(old.expedientNumber)?old.expedientNumber:r.expedientNumber};});
- next.records=normalizeWorkflowState({records:next.records,workflowVersion:input.workflowVersion||1}).records;next.workflowVersion=2;
+ next.records=normalizeWorkflowState({records:next.records,workflowVersion:input.workflowVersion||1}).records;next.workflowVersion=3;
  if(new Set(next.records.map(r=>r.expedientNumber)).size!==next.records.length)throw Error('Hay números de expediente duplicados.');
  next.nextNumber=Math.max(1,...next.records.map(r=>r.expedientNumber+1));
  for(const sale of input.monthlySales||[])business.api.saveMonthlySales(sale);
  result={imported:next.records.length};
  }else result=business.api[method](input);
- if(readMethods.has(method))return reply({result:modernClient?result:legacyWorkflowResult(result,input)});
+ if(readMethods.has(method))return reply({result:modernClient?result:legacyWorkflowResult(result,input,clientVersion)});
  const next=await stageWorkspace(business.getState());next.users=[];
- const {data:committed,error:commitError}=await service.rpc('cx_commit_state',{expected_version:workspace.version,next_state:next,actor_id:profile.id,expected_profile_updated:profile.updated_at});if(commitError)throw Error('No se pudieron guardar los cambios.');if(committed)return reply({result:modernClient?result:legacyWorkflowResult(result,input)});
+ const {data:committed,error:commitError}=await service.rpc('cx_commit_state',{expected_version:workspace.version,next_state:next,actor_id:profile.id,expected_profile_updated:profile.updated_at});if(commitError)throw Error('No se pudieron guardar los cambios.');if(committed)return reply({result:modernClient?result:legacyWorkflowResult(result,input,clientVersion)});
  }
  return reply({error:'Otro usuario actualizó los datos. Intenta nuevamente.'},409);
  }catch(error){return reply({error:error.message||'No se pudo completar la acción.'},400);}

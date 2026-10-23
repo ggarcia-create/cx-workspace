@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict');
+(async()=>{
+ const {SHEET_INTAKE,mapSheetRecord,rowHasInput,sheetDate,routeSheetRecord}=await import('../sheet-intake.mjs');
+ const row=Array(38).fill('');
+ const put=(column,value)=>row[SHEET_INTAKE.columns[column]]=value;
+ assert.equal(rowHasInput(row),false);
+ put('type','Devolución');put('date',46300);put('order','2000012345678901');put('product','Laptop Dell Latitude');put('contact','Mercado Libre');put('quantity',1);put('price',12500.5);put('responsibleArea','Empaque - Logística');
+ put('reason','Producto no funciona o presenta daños');put('component','Batería');put('specificReason','No retiene carga');put('customerReason','La batería dura pocos minutos.');
+ const mapped=mapSheetRecord(row,'cxsheet-2-test');
+ assert.equal(mapped.type,0);assert.equal(mapped.date,sheetDate(46300));assert.equal(mapped.contact,'Mercado Libre');assert.equal(mapped.price,1250050);assert.equal(mapped.sourceImportKey,'cxsheet-2-test');assert.deepEqual(mapped.specificReasons,['No retiene carga']);
+ put('received','Sí');put('receivedOutcome','Cerrado a favor de Rematech');put('serial','SN-001');
+ const received=mapSheetRecord(row,'cxsheet-2-test');assert.equal(received.receivedOnRegistration,true);assert.equal(received.receivedOutcome,'rematech');
+ assert.deepEqual(routeSheetRecord(received),['Reparación','Expedientes · Devoluciones']);
+ put('received','No');const pendingReturn=mapSheetRecord(row,'cxsheet-2-pending');assert.deepEqual(routeSheetRecord(pendingReturn),['Devoluciones','En proceso']);
+ put('type','Cambio de equipo');const pendingExchange=mapSheetRecord(row,'cxsheet-2-change');assert.deepEqual(routeSheetRecord(pendingExchange),['Devoluciones','En proceso · Pendiente de llegada y confirmación']);
+ put('type','Servicio');put('received','No');put('hasPassword','Sí');put('devicePassword','Equipo-123');
+ const service=mapSheetRecord(row,'cxsheet-3-test');assert.equal(service.type,2);assert.equal(service.deviceHasPassword,true);assert.equal(service.devicePassword,'Equipo-123');
+ assert.deepEqual(routeSheetRecord(service),['Reparación','Equipos en servicio']);
+ put('type','Reembolso parcial');put('refundMethod','Porcentaje');put('percentage',12.5);
+ const partial=mapSheetRecord(row,'cxsheet-4-test');assert.equal(partial.type,3);assert.equal(partial.refundMode,'percentage');assert.equal(partial.percentage,12.5);
+ assert.deepEqual(routeSheetRecord(partial),['Devoluciones','Cerradas']);
+ put('extra1Reason','El producto es diferente');put('extra1Specific','Color diferente');
+ put('extra3Reason','El comprador se arrepintió');put('extra3Specific','Prefiere otro modelo');put('extra4Reason','Producto no funciona o presenta daños');put('extra4Component','Encendido');put('extra4Specific','No enciende');
+ const withExtra=mapSheetRecord(row,'cxsheet-5-test');assert.equal(withExtra.additionalFaults.length,3);assert.equal(withExtra.additionalFaults[0].specificReason,'Color diferente');assert.equal(withExtra.additionalFaults[1].specificReason,'Prefiere otro modelo');assert.equal(withExtra.additionalFaults[2].component,'Encendido');
+ console.log('Sheets intake: row mapping, dates, routing inputs, service credentials, refunds and additional failures passed.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
