@@ -779,7 +779,12 @@ async function intakeKey(row,rowNumber){
  if(existing)return existing;
  return `cxsheet-${rowNumber}-${crypto.randomUUID()}`;
 }
+async function ensureSheetIntakeCheckboxes(){
+ const {firstDataRow,maxRows,columns}=SHEET_INTAKE;
+ await sheetsRequest(':batchUpdate',{method:'POST',body:JSON.stringify({requests:[{setDataValidation:{range:{sheetId:1764230010,startRowIndex:firstDataRow-1,endRowIndex:firstDataRow-1+maxRows,startColumnIndex:columns.selected,endColumnIndex:columns.selected+1},rule:{condition:{type:'BOOLEAN'},strict:true,showCustomUi:true}}}]})});
+}
 async function loadSheetIntakeRows(){
+ await ensureSheetIntakeCheckboxes();
  const sheetRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${SHEET_INTAKE.firstDataRow}:AM${SHEET_INTAKE.firstDataRow+SHEET_INTAKE.maxRows-1}`);
  const response=await sheetsRequest(`/values/${sheetRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
  return Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}));

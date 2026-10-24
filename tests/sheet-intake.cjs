@@ -1,6 +1,10 @@
 const assert=require('node:assert/strict');
 (async()=>{
  const {SHEET_INTAKE,mapSheetRecord,rowHasInput,rowSelected,sheetDate,routeSheetRecord}=await import('../sheet-intake.mjs');
+const apiSource=require('node:fs').readFileSync(require('node:path').join(__dirname,'../supabase/functions/cx-api/index.ts'),'utf8');
+assert.match(apiSource,/async function ensureSheetIntakeCheckboxes\(\)/,'The API restores checkbox validation before reading an intake batch');
+assert.match(apiSource,/setDataValidation:\{range:\{sheetId:1764230010,startRowIndex:firstDataRow-1,endRowIndex:firstDataRow-1\+maxRows,startColumnIndex:columns\.selected,endColumnIndex:columns\.selected\+1\},rule:\{condition:\{type:'BOOLEAN'\}/,'Checkbox validation covers every capture row');
+assert.match(apiSource,/async function loadSheetIntakeRows\(\)\{\s*await ensureSheetIntakeCheckboxes\(\);/,'Preview and sync repair removed checkboxes before reading the sheet');
  const row=Array(39).fill('');
  const put=(column,value)=>row[SHEET_INTAKE.columns[column]]=value;
  assert.equal(rowHasInput(row),false);
