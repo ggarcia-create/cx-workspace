@@ -33,7 +33,7 @@ async function reviewCloudAccess(){
    closeGlobalSearch();records=[];openRecord=null;cloudWaiting();return;
   }
   updateProfile();
-  if(accessChanged){closeGlobalSearch();records=[];openRecord=null;editingRecord=null;recordType=null;current=Object.keys(moduleNames).find(m=>can(m))||'registros';selected=0;render();}
+  if(accessChanged){closeGlobalSearch();records=[];openRecord=null;editingRecord=null;recordType=null;current=Object.keys(moduleNames).find(m=>(m!=='registros'||isAdmin())&&can(m))||'registros';selected=0;render();}
   if(user.role!=='admin'&&!Object.values(user.permissions||{}).some(p=>p.view))return;
   const unchanged=!accessChanged&&Number.isSafeInteger(user.dataVersion)&&cloudRecordsSnapshot?.accountId===accountId&&cloudRecordsSnapshot.version===user.dataVersion;
   if(!recordType&&!openRecord&&!unchanged){

@@ -8,7 +8,7 @@ let source=fs.readFileSync('supabase/functions/cx-api/index.ts','utf8')
  .replace("import * as pdfLib from 'npm:pdf-lib@1.17.1';","const pdfLib=require('pdf-lib');")
  .replace("import nodemailer from 'npm:nodemailer@7.0.11';",'')
  .replace("import {Buffer} from 'node:buffer';","const {Buffer}=require('node:buffer');")
- .replace("import {SHEET_INTAKE, mapSheetRecord, rowHasInput, routeSheetRecord} from '../../../sheet-intake.mjs';",'')
+ .replace("import {SHEET_INTAKE, mapSheetRecord, rowHasInput, rowSelected, routeSheetRecord} from '../../../sheet-intake.mjs';",'')
  .replace('const historicalStore=createTieredState(createSheetsObjects(sheetsRequest));','const historicalStore=createTieredState(testObjects);');
 const objects=new Map();let unavailable=false;
 const testObjects={putVerified:async(value,hash)=>{if(unavailable)throw Error('Sheets unavailable');objects.set(hash,structuredClone(value));return {hash,range:'Versiones!A2:F3'};},readMany:async refs=>{if(unavailable)throw Error('Sheets unavailable');return refs.map(r=>structuredClone(objects.get(r.hash)));}};

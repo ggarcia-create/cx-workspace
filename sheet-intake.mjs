@@ -13,6 +13,7 @@ export const SHEET_INTAKE = {
     destination: 29, status: 30, folio: 31,
     extra3Reason: 32, extra3Component: 33, extra3Specific: 34,
     extra4Reason: 35, extra4Component: 36, extra4Specific: 37,
+    selected: 38,
   },
 };
 
@@ -86,8 +87,13 @@ export function mapSheetRecord(row, sourceImportKey) {
 }
 
 export function rowHasInput(row) {
-  const ignored = new Set(['key', 'contact', 'quantity', 'total', 'destination', 'status', 'folio']);
+  const ignored = new Set(['key', 'contact', 'quantity', 'total', 'destination', 'status', 'folio', 'selected']);
   return Object.keys(SHEET_INTAKE.columns).some(name => !ignored.has(name) && clean(cell(row, name)) !== '');
+}
+
+export function rowSelected(row) {
+  const value = cell(row, 'selected');
+  return value === true || ['TRUE', 'VERDADERO', 'SI', 'SÍ', '1'].includes(clean(value).toLocaleUpperCase('es-MX'));
 }
 
 export function routeSheetRecord(record) {

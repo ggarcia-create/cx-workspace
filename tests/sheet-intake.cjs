@@ -1,9 +1,14 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {SHEET_INTAKE,mapSheetRecord,rowHasInput,sheetDate,routeSheetRecord}=await import('../sheet-intake.mjs');
- const row=Array(38).fill('');
+ const {SHEET_INTAKE,mapSheetRecord,rowHasInput,rowSelected,sheetDate,routeSheetRecord}=await import('../sheet-intake.mjs');
+ const row=Array(39).fill('');
  const put=(column,value)=>row[SHEET_INTAKE.columns[column]]=value;
  assert.equal(rowHasInput(row),false);
+ assert.equal(rowSelected(row),false);
+ put('selected',true);assert.equal(rowSelected(row),true);assert.equal(rowHasInput(row),false);
+ put('selected','FALSE');assert.equal(rowSelected(row),false);
+ put('selected','TRUE');assert.equal(rowSelected(row),true);
+ put('selected','');
  put('type','Devolución');put('date',46300);put('order','2000012345678901');put('product','Laptop Dell Latitude');put('contact','Mercado Libre');put('quantity',1);put('price',12500.5);put('responsibleArea','Empaque - Logística');
  put('reason','Producto no funciona o presenta daños');put('component','Batería');put('specificReason','No retiene carga');put('customerReason','La batería dura pocos minutos.');
  const mapped=mapSheetRecord(row,'cxsheet-2-test');

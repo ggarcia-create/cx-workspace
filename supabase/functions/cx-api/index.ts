@@ -1,5 +1,5 @@
 // @ts-nocheck
-import {SHEET_INTAKE, mapSheetRecord, rowHasInput, routeSheetRecord} from '../../../sheet-intake.mjs';
+import {SHEET_INTAKE, mapSheetRecord, rowHasInput, rowSelected, routeSheetRecord} from '../../../sheet-intake.mjs';
 const catalogRoot={};
 (function(root){
  const catalog={
@@ -761,6 +761,7 @@ async function clearIntakeRows(rowNumbers){
   `'${SHEET_INTAKE.name}'!A${rowNumber}:AB${rowNumber}`,
   `'${SHEET_INTAKE.name}'!AG${rowNumber}:AL${rowNumber}`,
   `'${SHEET_INTAKE.name}'!AE${rowNumber}:AF${rowNumber}`,
+  `'${SHEET_INTAKE.name}'!AM${rowNumber}:AM${rowNumber}`,
  ]);
  await sheetsRequest('/values:batchClear',{method:'POST',body:JSON.stringify({ranges})});
 }
@@ -779,12 +780,12 @@ async function intakeKey(row,rowNumber){
  return `cxsheet-${rowNumber}-${crypto.randomUUID()}`;
 }
 async function loadSheetIntakeRows(){
- const sheetRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${SHEET_INTAKE.firstDataRow}:AL${SHEET_INTAKE.firstDataRow+SHEET_INTAKE.maxRows-1}`);
+ const sheetRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${SHEET_INTAKE.firstDataRow}:AM${SHEET_INTAKE.firstDataRow+SHEET_INTAKE.maxRows-1}`);
  const response=await sheetsRequest(`/values/${sheetRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
  return Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}));
 }
 async function intakeSnapshot(rows){
- const data=rows.filter(({row})=>rowHasInput(row)).map(({row,rowNumber})=>[rowNumber,...row.slice(1,28),...row.slice(32,38)]);
+ const data=rows.filter(({row})=>rowSelected(row)&&rowHasInput(row)).map(({row,rowNumber})=>[rowNumber,true,...row.slice(1,28),...row.slice(32,38)]);
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));
  return [...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
 }
@@ -792,7 +793,7 @@ async function previewSheetIntakeRows(business,actorId){
  const rows=await loadSheetIntakeRows(),previewStore=createBusinessStore(structuredClone(business.getState()),actorId);
  const seen=new Set(),results=[];
  for(const {row,rowNumber} of rows){
-  if(!rowHasInput(row))continue;
+  if(!rowSelected(row)||!rowHasInput(row))continue;
   const sourceImportKey=String(row[SHEET_INTAKE.columns.key]||'').trim()||`preview-${rowNumber}`;
   if(seen.has(sourceImportKey)){results.push({row:rowNumber,valid:false,error:'Clave de carga repetida en la hoja.'});continue;}seen.add(sourceImportKey);
   const existing=business.getState().records.find(record=>record.sourceImportKey===sourceImportKey);
@@ -810,7 +811,7 @@ async function syncSheetIntakeRows(business,expectedSnapshot){
  const rows=await loadSheetIntakeRows(),candidates=[];
  if(!expectedSnapshot||await intakeSnapshot(rows)!==expectedSnapshot)throw Error('La hoja cambió después de la revisión. Vuelve a validar la captura antes de sincronizar.');
  for(const {row,rowNumber} of rows){
-  if(!rowHasInput(row))continue;
+  if(!rowSelected(row)||!rowHasInput(row))continue;
   candidates.push({row,rowNumber,sourceImportKey:await intakeKey(row,rowNumber)});
  }
  const keyWrites=[];
@@ -890,6 +891,7 @@ Deno.serve(async req=>{
   return reply({result:{...userShape(profile),dataVersion}});
  }
  if(!profile.approved||!profile.active)return reply({error:'Tu cuenta está pendiente de autorización del administrador.'},403);
+ if((method==='previewSheetIntake'||method==='syncSheetIntake')&&profile.role!=='admin')return reply({error:'Carga desde Sheets está disponible únicamente para el administrador.'},403);
  if(method==='archiveConnectionTest'){if(profile.role!=='admin')return reply({error:'Solo el administrador puede configurar el histórico.'},403);return reply({result:await archiveConnectionTest()});}
  if(method==='listUsers'){if(profile.role!=='admin')return reply({error:'Solo el administrador puede gestionar usuarios.'},403);return reply({result:profiles.map(userShape)});}
  if(method==='saveUser'){
@@ -911,7 +913,7 @@ Deno.serve(async req=>{
  const {data:workspace,error}=await service.from('cx_workspace').select('*').eq('id',1).single();if(error)throw Error('No se pudo cargar el espacio compartido.');
  const state={...await hydrateWorkspace(workspace.state),users:profiles.map(userShape)},business=createBusinessStore(state,profile.id);let result;
  if(method==='syncSheetIntake'){
-  if(profile.role!=='admin'&&!profile.permissions?.registros?.edit)return reply({error:'Necesitas permiso de edición en Carga desde Sheets para sincronizar expedientes.'},403);
+  if(profile.role!=='admin')return reply({error:'Carga desde Sheets está disponible únicamente para el administrador.'},403);
   const sync=await syncSheetIntakeRows(business,input?.snapshot);
   if(sync.summary.imported){
    const next=await stageWorkspace(business.getState());next.users=[];
@@ -925,7 +927,7 @@ Deno.serve(async req=>{
   return reply({result:sync.summary});
  }
  if(method==='previewSheetIntake'){
-  if(profile.role!=='admin'&&!profile.permissions?.registros?.edit)return reply({error:'Necesitas permiso de edición en Carga desde Sheets para revisar la captura.'},403);
+  if(profile.role!=='admin')return reply({error:'Carga desde Sheets está disponible únicamente para el administrador.'},403);
   return reply({result:await previewSheetIntakeRows(business,profile.id)});
  }
  if(method==='importLocalData'){

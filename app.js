@@ -46,7 +46,7 @@ async function handleSheetSyncDeepLink(){
  sheetDeepLinkBusy=true;
  try{
   if(!await desktop.consumeSheetSyncRequest())return;
-  if(!can('registros','edit')){savedMessage='Tu cuenta todavía no tiene permiso para sincronizar expedientes. Solicita al administrador acceso de edición a Carga desde Sheets.';return;}
+  if(!isAdmin()){savedMessage='Carga desde Sheets está disponible únicamente para el administrador.';return;}
   sheetPreview=null;savedMessage='Se abrió la carga de Sheets. Revisa los expedientes y destinos antes de confirmar.';navigate('registros');
   sheetSyncing=true;render();
   try{sheetPreview=await desktop.previewSheetIntake();savedMessage='';}catch(err){savedMessage=authError(err);}
@@ -225,9 +225,14 @@ const expanded = new Set(['devoluciones']);
 const content = document.getElementById('content');
 const nav = document.getElementById('navigation');
 function drawNavigation(){
- nav.innerHTML = modules.filter(m=>can(m.id)).map(m=>`<div class="navgroup"><button class="navitem ${current===m.id?'active':''}" data-module="${m.id}" title="${m.name}" ${current===m.id?'aria-current="page"':''} ${m.items.length?`aria-expanded="${expanded.has(m.id)}" aria-controls="sub-${m.id}"`:''}>${icon(m.icon)}<span>${m.name}</span>${m.items.length?icon('chevron').replace('<svg','<svg class="chevron"'):''}</button>${m.items.length?`<div class="submenu" id="sub-${m.id}" ${expanded.has(m.id)?'':'hidden'}>${m.items.map((it,i)=>`<button data-module="${m.id}" data-index="${i}" class="${current===m.id&&selected===i?'active':''}" ${current===m.id&&selected===i?'aria-current="page"':''}>${icon(it[1])}${it[0]}</button>`).join('')}</div>`:''}</div>`).join('');
+ nav.innerHTML = modules.filter(m=>(m.id!=='registros'||isAdmin())&&can(m.id)).map(m=>`<div class="navgroup"><button class="navitem ${current===m.id?'active':''}" data-module="${m.id}" title="${m.name}" ${current===m.id?'aria-current="page"':''} ${m.items.length?`aria-expanded="${expanded.has(m.id)}" aria-controls="sub-${m.id}"`:''}>${icon(m.icon)}<span>${m.name}</span>${m.items.length?icon('chevron').replace('<svg','<svg class="chevron"'):''}</button>${m.items.length?`<div class="submenu" id="sub-${m.id}" ${expanded.has(m.id)?'':'hidden'}>${m.items.map((it,i)=>`<button data-module="${m.id}" data-index="${i}" class="${current===m.id&&selected===i?'active':''}" ${current===m.id&&selected===i?'aria-current="page"':''}>${icon(it[1])}${it[0]}</button>`).join('')}</div>`:''}</div>`).join('');
 }
 function render(){
+ if(current==='registros'&&!isAdmin()){
+  const firstAllowed=Object.keys(moduleNames).find(m=>m!=='registros'&&can(m));
+  if(firstAllowed)current=firstAllowed;
+  else{content.innerHTML='<div class="empty"><h1>Bienvenido a CX Workspace</h1><p>El administrador habilitará los módulos que puedes ver y editar.</p></div>';drawNavigation();return;}
+ }
  if(!Object.keys(moduleNames).some(m=>can(m))){content.innerHTML='<div class="empty"><h1>Bienvenido a CX Workspace</h1><p>Tu sesión está iniciada. El administrador habilitará los módulos que puedes ver y editar.</p><p>Puedes buscar e instalar actualizaciones desde el menú de tu cuenta.</p></div>';drawNavigation();return;}
  if(current==='dashboard'){renderDashboard();drawNavigation();return;}
  if(current==='configuracion'){renderSettings();drawNavigation();return;}
@@ -252,7 +257,7 @@ function render(){
  updateResponsibleArea();updateDateClassification();
  restoreRecordFilters();
 }
-function navigate(id,index=0){if(!can(id))return;editingRecord=null;openRecord=null;recordFilters={query:'',contact:'',reason:'',type:'',sort:'newest'};savedMessage='';current=id;selected=index;recordType=null;expanded.add(id);render();document.getElementById('search-results').hidden=true;document.getElementById('global-search').setAttribute('aria-expanded','false');}
+function navigate(id,index=0){if(!can(id)||id==='registros'&&!isAdmin())return;editingRecord=null;openRecord=null;recordFilters={query:'',contact:'',reason:'',type:'',sort:'newest'};savedMessage='';current=id;selected=index;recordType=null;expanded.add(id);render();document.getElementById('search-results').hidden=true;document.getElementById('global-search').setAttribute('aria-expanded','false');}
 nav.addEventListener('click',e=>{const b=e.target.closest('[data-module]');if(!b)return;const m=modules.find(m=>m.id===b.dataset.module);if(b.dataset.index!==undefined){const index=Number(b.dataset.index);navigate(m.id,index);}else{if(current===m.id && m.items.length && !document.querySelector('.shell').classList.contains('collapsed')){expanded.has(m.id)?expanded.delete(m.id):expanded.add(m.id);drawNavigation();}else navigate(m.id);}});
 content.addEventListener('click',e=>{const t=e.target.closest('[data-type]'),tab=e.target.closest('[data-tab]');if(t){if(!can('registros','edit'))return;editingRecord=null;savedMessage='';recordType=types[Number(t.dataset.type)];render();}if(tab){openRecord=null;recordFilters={query:'',contact:'',reason:'',type:'',sort:'newest'};savedMessage='';selected=Number(tab.dataset.tab);render();}if(e.target.closest('#back-types')||e.target.closest('#cancel-record')){recordType=null;openRecord=editingRecord;editingRecord=null;render();}});
 content.addEventListener('click',e=>{
@@ -338,7 +343,7 @@ async function searchModules(){
  clearTimeout(globalSearchTimer);const query=search.value.trim(),request=++globalSearchRequest;
  if(!query){results.hidden=true;search.setAttribute('aria-expanded','false');return;}
  const q=normal(query),tokens=q.split(/\s+/),matches=value=>tokens.every(t=>normal(String(value||'')).includes(t));
- const entries=modules.filter(m=>can(m.id)).flatMap(m=>[{id:m.id,index:0,name:m.name,icon:m.icon},...m.items.filter((it,i)=>m.id!=='configuracion'||i!==1||isAdmin()).map(it=>({id:m.id,index:m.items.indexOf(it),name:`${m.name} / ${it[0]}`,icon:it[1]}))]).filter(e=>matches(e.name));
+ const entries=modules.filter(m=>(m.id!=='registros'||isAdmin())&&can(m.id)).flatMap(m=>[{id:m.id,index:0,name:m.name,icon:m.icon},...m.items.filter((it,i)=>m.id!=='configuracion'||i!==1||isAdmin()).map(it=>({id:m.id,index:m.items.indexOf(it),name:`${m.name} / ${it[0]}`,icon:it[1]}))]).filter(e=>matches(e.name));
  results.hidden=false;search.setAttribute('aria-expanded','true');results.innerHTML='<p role="status">Buscando…</p>';
  try{
   const rows=await desktop.listRecords();if(request!==globalSearchRequest||search.value.trim()!==query||!currentUser)return;
