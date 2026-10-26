@@ -12,6 +12,12 @@ assert.match(apiSource,/quantityDefaults=.*filter\(item=>item\.value===undefined
 assert.match(apiSource,/valueRenderOption=FORMULA/,'Default quantity repair preserves existing formulas and editable values');
 assert.match(apiSource,/values:\[\[1\]\]/,'Rows return to the default quantity after successful sync cleanup');
 assert.match(apiSource,/async function loadSheetIntakeRows\(\)\{\s*await ensureSheetIntakeStructure\(\);/,'Preview and sync repair missing formulas and checkboxes before reading the sheet');
+assert.match(apiSource,/async function sheetIntakeSelectionSignature\(\)[\s\S]*?rowSelected\(row\)&&rowHasInput\(row\)/,'The app can detect changed selected rows with one lightweight Sheets read');
+assert.match(apiSource,/if\(method==='hasSelectedSheetIntake'\)return reply\(\{result:await sheetIntakeSelectionSignature\(\)\}\)/,'Only the authenticated admin can poll for selected Sheets rows');
+const appSource=require('node:fs').readFileSync(require('node:path').join(__dirname,'../app.js'),'utf8');
+assert.match(appSource,/setInterval\(\(\)=>\{void watchSheetIntakeSelection\(\);\},4000\)/,'The app refreshes intake review automatically while it is open');
+assert.match(appSource,/desktop\.previewSheetIntake\(\)/,'A newly selected Sheets row appears in the review panel without auto-importing it');
+assert.match(appSource,/Confirmar \$\{preview\.summary\.ready\} expediente/,'The administrator explicitly confirms before selected records are added');
 assert.match(apiSource,/async function clearIntakeRows\(rowNumbers\)\{[\s\S]*?AM\$\{rowNumber\}[\s\S]*?await ensureSheetIntakeStructure\(\);/,'Post-sync cleanup resets checkbox state and restores checkbox validation');
  const row=Array(39).fill('');
  const put=(column,value)=>row[SHEET_INTAKE.columns[column]]=value;

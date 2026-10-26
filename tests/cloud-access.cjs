@@ -22,6 +22,7 @@ init.then(()=> (async()=>{
  assert.equal((await request('viewer','saveMonthlySales',{})).status,400);
  assert.equal((await request('spectator','syncSheetIntake')).status,403,'Non-admin users cannot sync Sheets intake');
  assert.equal((await request('spectator','previewSheetIntake')).status,403,'Non-admin users cannot review Sheets intake');
+ assert.equal((await request('spectator','hasSelectedSheetIntake')).status,403,'Non-admin users cannot poll for selected Sheets intake rows');
  assert.equal(commits,0);
  assert.equal((await request('admin','saveRecord',{})).status,400,'New expedientes must enter through the reviewed Sheets intake');
  assert.equal((await request('admin','saveRecords',[])).status,400,'Batch forms are replaced by the reviewed Sheets intake');
@@ -36,6 +37,7 @@ init.then(()=> (async()=>{
  const readsBeforeRestrictedIntake=reads;
  assert.equal((await request('pending','syncSheetIntake')).status,403,'Legacy Ingresos permissions cannot sync Sheets intake');
  assert.equal((await request('pending','previewSheetIntake')).status,403,'Legacy Ingresos permissions cannot preview Sheets intake');
+ assert.equal((await request('pending','hasSelectedSheetIntake')).status,403,'Legacy Ingresos permissions cannot poll selected Sheets intake rows');
  assert.equal(reads,readsBeforeRestrictedIntake,'Non-admin intake requests are rejected before reading shared data');
  const listed=await request('pending','listRecords');assert.equal(listed.status,200);assert.deepEqual(listed.body.result,[]);
  const shape=(await request('admin','listUsers')).body.result;assert(!shape.some(u=>'password' in u||'hash' in u||'salt' in u));

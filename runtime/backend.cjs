@@ -23,7 +23,7 @@ const cloudMethods={cloudResume:'resume',cloudGoogle:'google',cloudSendSignup:'s
 async function dispatch(method,input){
  if(method==='openSheetIntake'){emit({event:'open-url',url:'https://docs.google.com/spreadsheets/d/18K2GhkeDERiHDx1cw_lNXOIcdUFF4cG6X1QQE1ghd1I/edit?gid=1764230010#gid=1764230010'});return true;}
  if(methods.has(method))return invoke(method,input);
- if(['previewSheetIntake','syncSheetIntake'].includes(method)){if(!cloud)throw Error('La captura desde Google Sheets requiere la conexión compartida de CX Workspace.');return cloud.call(method,input);}
+ if(['hasSelectedSheetIntake','previewSheetIntake','syncSheetIntake'].includes(method)){if(!cloud)throw Error('La captura desde Google Sheets requiere la conexión compartida de CX Workspace.');return cloud.call(method,input);}
  if(['reportMailStatus','sendFaultReport'].includes(method)){if(!cloud)throw Error('El envío de reportes requiere el espacio compartido.');return cloud.call(method,input);}
  if(Object.hasOwn(cloudMethods,method)){if(!cloud)throw Error('Acceso compartido no configurado.');return cloud[cloudMethods[method]](input);}
  if(method==='cloudImportLocal'){

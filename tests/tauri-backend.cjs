@@ -29,6 +29,7 @@ async function load(cloudMode){
   assert.equal((await cloud.call('status')).result.cloud,true);
   assert.equal((await cloud.call('cloudGoogle')).result.pending,true);assert.equal((await cloud.call('cloudResume')).result.role,'admin');
   await cloud.call('syncSheetIntake');assert.equal(cloud.calls.at(-1).method,'syncSheetIntake');
+  await cloud.call('hasSelectedSheetIntake');assert.equal(cloud.calls.at(-1).method,'hasSelectedSheetIntake');
   const csv=(await cloud.call('exportFaultReport',{})).result;assert.ok(csv.includes("'=HYPERLINK"),'CSV formula injection neutralized');
   assert.match((await cloud.call('cloudImportLocal')).error,/No hay expedientes/);
   await cloud.call('deleteRecord','case-id');assert.equal(cloud.calls.at(-1).method,'deleteRecord');

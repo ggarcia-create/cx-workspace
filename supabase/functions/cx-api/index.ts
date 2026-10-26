@@ -804,6 +804,16 @@ async function loadSheetIntakeRows(){
  const response=await sheetsRequest(`/values/${sheetRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
  return Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}));
 }
+async function sheetIntakeSelectionSignature(){
+ const sheetRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${SHEET_INTAKE.firstDataRow}:AM${SHEET_INTAKE.firstDataRow+SHEET_INTAKE.maxRows-1}`);
+ const response=await sheetsRequest(`/values/${sheetRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
+ const data=Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}))
+  .filter(({row})=>rowSelected(row)&&rowHasInput(row))
+  .map(({row,rowNumber})=>[rowNumber,true,...row.slice(1,28),...row.slice(32,38)]);
+ if(!data.length)return null;
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));
+ return [...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
+}
 async function intakeSnapshot(rows){
  const data=rows.filter(({row})=>rowSelected(row)&&rowHasInput(row)).map(({row,rowNumber})=>[rowNumber,true,...row.slice(1,28),...row.slice(32,38)]);
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));
@@ -883,7 +893,7 @@ async function archiveConnectionTest(){
 }
 
 import {createClient} from 'npm:@supabase/supabase-js@2.117.3';
-const readMethods=new Set(['listRecords','listMonthlySales','dashboardData','faultReportData','listTechnicians','listCommentUsers','listNotifications','previewSheetIntake']);
+const readMethods=new Set(['listRecords','listMonthlySales','dashboardData','faultReportData','listTechnicians','listCommentUsers','listNotifications','hasSelectedSheetIntake','previewSheetIntake']);
 const writeMethods=new Set(['syncSheetIntake','deleteRecord','saveRepair','addRecordComment','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','saveMonthlySales']);
 // Keep older installed clients readable while they receive the new navigation.
 function legacyWorkflowResult(value,input,clientVersion){
@@ -911,7 +921,8 @@ Deno.serve(async req=>{
   return reply({result:{...userShape(profile),dataVersion}});
  }
  if(!profile.approved||!profile.active)return reply({error:'Tu cuenta está pendiente de autorización del administrador.'},403);
- if((method==='previewSheetIntake'||method==='syncSheetIntake')&&profile.role!=='admin')return reply({error:'Carga desde Sheets está disponible únicamente para el administrador.'},403);
+ if((method==='hasSelectedSheetIntake'||method==='previewSheetIntake'||method==='syncSheetIntake')&&profile.role!=='admin')return reply({error:'Carga desde Sheets está disponible únicamente para el administrador.'},403);
+ if(method==='hasSelectedSheetIntake')return reply({result:await sheetIntakeSelectionSignature()});
  if(method==='archiveConnectionTest'){if(profile.role!=='admin')return reply({error:'Solo el administrador puede configurar el histórico.'},403);return reply({result:await archiveConnectionTest()});}
  if(method==='listUsers'){if(profile.role!=='admin')return reply({error:'Solo el administrador puede gestionar usuarios.'},403);return reply({result:profiles.map(userShape)});}
  if(method==='saveUser'){
