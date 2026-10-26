@@ -2,9 +2,13 @@ const assert=require('node:assert/strict');
 (async()=>{
  const {SHEET_INTAKE,mapSheetRecord,rowHasInput,rowSelected,sheetDate,routeSheetRecord}=await import('../sheet-intake.mjs');
 const apiSource=require('node:fs').readFileSync(require('node:path').join(__dirname,'../supabase/functions/cx-api/index.ts'),'utf8');
-assert.match(apiSource,/async function ensureSheetIntakeCheckboxes\(\)/,'The API restores checkbox validation before reading an intake batch');
-assert.match(apiSource,/setDataValidation:\{range:\{sheetId:1764230010,startRowIndex:firstDataRow-1,endRowIndex:firstDataRow-1\+maxRows,startColumnIndex:columns\.selected,endColumnIndex:columns\.selected\+1\},rule:\{condition:\{type:'BOOLEAN'\}/,'Checkbox validation covers every capture row');
-assert.match(apiSource,/async function loadSheetIntakeRows\(\)\{\s*await ensureSheetIntakeCheckboxes\(\);/,'Preview and sync repair removed checkboxes before reading the sheet');
+assert.match(apiSource,/async function ensureSheetIntakeStructure\(\)/,'The API restores checkbox and formula structure before reading an intake batch');
+assert.match(apiSource,/setDataValidation:\{range:\{sheetId:1764230010,startRowIndex:start,endRowIndex:end,startColumnIndex:columns\.selected,endColumnIndex:columns\.selected\+1\},rule:\{condition:\{type:'BOOLEAN'\}/,'Checkbox validation covers every capture row');
+assert.match(apiSource,/const channelFormula=row=>.*\^EC\[0-9\]\{4\}\$/,'Channel detection formula recognizes Shopify order IDs');
+assert.match(apiSource,/startColumnIndex:7,endColumnIndex:8/,'Channel formulas are restored across all capture rows');
+assert.match(apiSource,/startColumnIndex:28,endColumnIndex:29/,'Claimed total formulas are restored across all capture rows');
+assert.match(apiSource,/startColumnIndex:29,endColumnIndex:30/,'Destination formulas are restored across all capture rows');
+assert.match(apiSource,/async function loadSheetIntakeRows\(\)\{\s*await ensureSheetIntakeStructure\(\);/,'Preview and sync repair missing formulas and checkboxes before reading the sheet');
  const row=Array(39).fill('');
  const put=(column,value)=>row[SHEET_INTAKE.columns[column]]=value;
  assert.equal(rowHasInput(row),false);

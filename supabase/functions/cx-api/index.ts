@@ -758,7 +758,8 @@ async function writeIntakeValues(data){
 async function clearIntakeRows(rowNumbers){
  if(!rowNumbers.length)return;
  const ranges=rowNumbers.flatMap(rowNumber=>[
-  `'${SHEET_INTAKE.name}'!A${rowNumber}:AB${rowNumber}`,
+  `'${SHEET_INTAKE.name}'!A${rowNumber}:G${rowNumber}`,
+  `'${SHEET_INTAKE.name}'!I${rowNumber}:AB${rowNumber}`,
   `'${SHEET_INTAKE.name}'!AG${rowNumber}:AL${rowNumber}`,
   `'${SHEET_INTAKE.name}'!AE${rowNumber}:AF${rowNumber}`,
   `'${SHEET_INTAKE.name}'!AM${rowNumber}:AM${rowNumber}`,
@@ -779,12 +780,20 @@ async function intakeKey(row,rowNumber){
  if(existing)return existing;
  return `cxsheet-${rowNumber}-${crypto.randomUUID()}`;
 }
-async function ensureSheetIntakeCheckboxes(){
+async function ensureSheetIntakeStructure(){
  const {firstDataRow,maxRows,columns}=SHEET_INTAKE;
- await sheetsRequest(':batchUpdate',{method:'POST',body:JSON.stringify({requests:[{setDataValidation:{range:{sheetId:1764230010,startRowIndex:firstDataRow-1,endRowIndex:firstDataRow-1+maxRows,startColumnIndex:columns.selected,endColumnIndex:columns.selected+1},rule:{condition:{type:'BOOLEAN'},strict:true,showCustomUi:true}}}]})});
+ const start=firstDataRow-1,end=start+maxRows,rows=formula=>Array.from({length:maxRows},(_,index)=>({values:[{userEnteredValue:{formulaValue:formula(firstDataRow+index)}}]}));
+ const channelFormula=row=>`=IF(D${row}="","",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^20000[0-9]{11}$"),"Mercado Libre",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^EC[0-9]{4}$"),"Shopify",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),".+-A$"),"Coppel",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^6000[0-9]*$"),"Walmart",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^70[0-9]-[0-9]+-[0-9]+$"),"Amazon",""))))))`;
+ const destinationFormula=row=>`=IF(B${row}="","",IF(B${row}="Devolución",IF(L${row}="Sí","Reparación / Expedientes • Devoluciones","Devoluciones / En proceso"),IF(B${row}="Cambio de equipo",IF(L${row}="Sí","Devoluciones / En proceso · Confirmar cambio","Devoluciones / En proceso · Pendiente de llegada y confirmación"),IF(B${row}="Servicio","Reparación / Equipos en servicio","Devoluciones / Reembolso parcial"))))`;
+ await sheetsRequest(':batchUpdate',{method:'POST',body:JSON.stringify({requests:[
+  {setDataValidation:{range:{sheetId:1764230010,startRowIndex:start,endRowIndex:end,startColumnIndex:columns.selected,endColumnIndex:columns.selected+1},rule:{condition:{type:'BOOLEAN'},strict:true,showCustomUi:true}}},
+  {updateCells:{range:{sheetId:1764230010,startRowIndex:start,endRowIndex:end,startColumnIndex:7,endColumnIndex:8},rows:rows(channelFormula),fields:'userEnteredValue'}},
+  {updateCells:{range:{sheetId:1764230010,startRowIndex:start,endRowIndex:end,startColumnIndex:28,endColumnIndex:29},rows:rows(row=>`=IF(OR(I${row}="",J${row}=""),"",I${row}*J${row})`),fields:'userEnteredValue'}},
+  {updateCells:{range:{sheetId:1764230010,startRowIndex:start,endRowIndex:end,startColumnIndex:29,endColumnIndex:30},rows:rows(destinationFormula),fields:'userEnteredValue'}}
+ ]})});
 }
 async function loadSheetIntakeRows(){
- await ensureSheetIntakeCheckboxes();
+ await ensureSheetIntakeStructure();
  const sheetRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${SHEET_INTAKE.firstDataRow}:AM${SHEET_INTAKE.firstDataRow+SHEET_INTAKE.maxRows-1}`);
  const response=await sheetsRequest(`/values/${sheetRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
  return Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}));
