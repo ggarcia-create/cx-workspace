@@ -765,6 +765,7 @@ async function clearIntakeRows(rowNumbers){
   `'${SHEET_INTAKE.name}'!AM${rowNumber}:AM${rowNumber}`,
  ]);
  await sheetsRequest('/values:batchClear',{method:'POST',body:JSON.stringify({ranges})});
+ await writeIntakeValues(rowNumbers.map(rowNumber=>({range:`'${SHEET_INTAKE.name}'!I${rowNumber}`,majorDimension:'ROWS',values:[[1]]})));
 }
 async function appendIntakeHistory(results){
  const completed=results.filter(item=>item.status==='Sincronizado'&&item.folio&&item.sourceImportKey);
@@ -783,6 +784,9 @@ async function intakeKey(row,rowNumber){
 async function ensureSheetIntakeStructure(){
  const {firstDataRow,maxRows,columns}=SHEET_INTAKE;
  const start=firstDataRow-1,end=start+maxRows,rows=formula=>Array.from({length:maxRows},(_,index)=>({values:[{userEnteredValue:{formulaValue:formula(firstDataRow+index)}}]}));
+ const quantityRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!I${firstDataRow}:I${firstDataRow+maxRows-1}`),quantityResponse=await sheetsRequest(`/values/${quantityRange}?valueRenderOption=FORMULA`);
+ const quantityDefaults=Array.from({length:maxRows},(_,index)=>({value:quantityResponse.values?.[index]?.[0],rowNumber:firstDataRow+index})).filter(item=>item.value===undefined||item.value==='').map(item=>({range:`'${SHEET_INTAKE.name}'!I${item.rowNumber}`,majorDimension:'ROWS',values:[[1]]}));
+ await writeIntakeValues(quantityDefaults);
  const channelFormula=row=>`=IF(D${row}="","",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^20000[0-9]{11}$"),"Mercado Libre",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^EC[0-9]{4}$"),"Shopify",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),".+-A$"),"Coppel",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^6000[0-9]*$"),"Walmart",IF(REGEXMATCH(UPPER(TRIM(TO_TEXT(D${row}))),"^70[0-9]-[0-9]+-[0-9]+$"),"Amazon",""))))))`;
  const destinationFormula=row=>`=IF(B${row}="","",IF(B${row}="Devolución",IF(L${row}="Sí","Reparación / Expedientes • Devoluciones","Devoluciones / En proceso"),IF(B${row}="Cambio de equipo",IF(L${row}="Sí","Devoluciones / En proceso · Confirmar cambio","Devoluciones / En proceso · Pendiente de llegada y confirmación"),IF(B${row}="Servicio","Reparación / Equipos en servicio","Devoluciones / Reembolso parcial"))))`;
  await sheetsRequest(':batchUpdate',{method:'POST',body:JSON.stringify({requests:[

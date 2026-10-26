@@ -8,6 +8,9 @@ assert.match(apiSource,/const channelFormula=row=>.*\^EC\[0-9\]\{4\}\$/,'Channel
 assert.match(apiSource,/startColumnIndex:7,endColumnIndex:8/,'Channel formulas are restored across all capture rows');
 assert.match(apiSource,/startColumnIndex:28,endColumnIndex:29/,'Claimed total formulas are restored across all capture rows');
 assert.match(apiSource,/startColumnIndex:29,endColumnIndex:30/,'Destination formulas are restored across all capture rows');
+assert.match(apiSource,/quantityDefaults=.*filter\(item=>item\.value===undefined\|\|item\.value===''\)/,'Blank quantity cells receive the default value of 1 without overwriting manual quantities');
+assert.match(apiSource,/valueRenderOption=FORMULA/,'Default quantity repair preserves existing formulas and editable values');
+assert.match(apiSource,/values:\[\[1\]\]/,'Rows return to the default quantity after successful sync cleanup');
 assert.match(apiSource,/async function loadSheetIntakeRows\(\)\{\s*await ensureSheetIntakeStructure\(\);/,'Preview and sync repair missing formulas and checkboxes before reading the sheet');
  const row=Array(39).fill('');
  const put=(column,value)=>row[SHEET_INTAKE.columns[column]]=value;
