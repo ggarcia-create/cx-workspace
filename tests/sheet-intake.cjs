@@ -12,6 +12,7 @@ assert.match(apiSource,/quantityDefaults=.*filter\(item=>item\.value===undefined
 assert.match(apiSource,/valueRenderOption=FORMULA/,'Default quantity repair preserves existing formulas and editable values');
 assert.match(apiSource,/values:\[\[1\]\]/,'Rows return to the default quantity after successful sync cleanup');
 assert.match(apiSource,/async function loadSheetIntakeRows\(\)\{\s*await ensureSheetIntakeStructure\(\);/,'Preview and sync repair missing formulas and checkboxes before reading the sheet');
+assert.match(apiSource,/async function clearIntakeRows\(rowNumbers\)\{[\s\S]*?AM\$\{rowNumber\}[\s\S]*?await ensureSheetIntakeStructure\(\);/,'Post-sync cleanup resets checkbox state and restores checkbox validation');
  const row=Array(39).fill('');
  const put=(column,value)=>row[SHEET_INTAKE.columns[column]]=value;
  assert.equal(rowHasInput(row),false);

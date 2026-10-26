@@ -766,6 +766,8 @@ async function clearIntakeRows(rowNumbers){
  ]);
  await sheetsRequest('/values:batchClear',{method:'POST',body:JSON.stringify({ranges})});
  await writeIntakeValues(rowNumbers.map(rowNumber=>({range:`'${SHEET_INTAKE.name}'!I${rowNumber}`,majorDimension:'ROWS',values:[[1]]})));
+ await writeIntakeValues(rowNumbers.map(rowNumber=>({range:`'${SHEET_INTAKE.name}'!AM${rowNumber}`,majorDimension:'ROWS',values:[[false]]})));
+ await ensureSheetIntakeStructure();
 }
 async function appendIntakeHistory(results){
  const completed=results.filter(item=>item.status==='Sincronizado'&&item.folio&&item.sourceImportKey);
