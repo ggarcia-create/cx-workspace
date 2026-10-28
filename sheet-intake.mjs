@@ -17,6 +17,8 @@ export const SHEET_INTAKE = {
   },
 };
 
+export const HISTORICAL_CUTOFF_DATE = '2026-08-31';
+
 const cell = (row, name) => row[SHEET_INTAKE.columns[name]];
 const clean = value => String(value ?? '').trim();
 
@@ -97,6 +99,9 @@ export function rowSelected(row) {
 }
 
 export function routeSheetRecord(record) {
+  if (record.date && record.date <= HISTORICAL_CUTOFF_DATE) {
+    return ['Histórico en Sheets', 'No se envía a módulos activos'];
+  }
   const routes = [
     ['Devoluciones', 'En proceso'],
     ['Devoluciones', record.receivedOnRegistration ? 'En proceso · Confirmar cambio' : 'En proceso · Pendiente de llegada y confirmación'],

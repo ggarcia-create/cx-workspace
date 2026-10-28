@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CX Workspace",
-  "version": "0.10.16",
+  "version": "0.10.18",
   "identifier": "com.yio.cxworkspace",
   "build": {
     "beforeDevCommand": "node scripts/prepare-tauri.cjs",

@@ -1,6 +1,6 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.117.3';
 const readMethods=new Set(['listRecords','listMonthlySales','dashboardData','faultReportData','listTechnicians','listCommentUsers','listNotifications']);
-const writeMethods=new Set(['saveRecord','saveRecords','deleteRecord','saveRepair','addRecordComment','readNotification','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','saveMonthlySales']);
+const writeMethods=new Set(['saveRecord','saveRecords','deleteRecord','saveRepair','addRecordComment','readNotification','readAllNotifications','validateQuality','confirmReceipt','receiveAndSend','receiveExchange','saveIdentifier','closeReturn','saveMonthlySales']);
 // Keep older installed clients readable while they receive the new navigation.
 function legacyWorkflowResult(value,input){
  const convert=r=>{if(!r||!['reparacion','calidad'].includes(r.module))return r;const index=r.type===2?2:r.type===1?1:0;return {...r,index,location:`Expedientes • ${r.module==='calidad'?'Calidad':'Reparación'} / ${index===2?'Equipos en servicio':index===1?'Cambio de equipo':'Devoluciones'}${r.archived?' · Archivado':''}`};};

@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {SHEET_INTAKE,mapSheetRecord,rowHasInput,rowSelected,sheetDate,routeSheetRecord}=await import('../sheet-intake.mjs');
+ const {SHEET_INTAKE,HISTORICAL_CUTOFF_DATE,mapSheetRecord,rowHasInput,rowSelected,sheetDate,routeSheetRecord}=await import('../sheet-intake.mjs');
 const apiSource=require('node:fs').readFileSync(require('node:path').join(__dirname,'../supabase/functions/cx-api/index.ts'),'utf8');
 assert.match(apiSource,/async function ensureSheetIntakeStructure\(\)/,'The API restores checkbox and formula structure before reading an intake batch');
 assert.match(apiSource,/setDataValidation:\{range:\{sheetId:1764230010,startRowIndex:start,endRowIndex:end,startColumnIndex:columns\.selected,endColumnIndex:columns\.selected\+1\},rule:\{condition:\{type:'BOOLEAN'\}/,'Checkbox validation covers every capture row');
@@ -8,6 +8,7 @@ assert.match(apiSource,/const channelFormula=row=>.*\^EC\[0-9\]\{4\}\$/,'Channel
 assert.match(apiSource,/startColumnIndex:7,endColumnIndex:8/,'Channel formulas are restored across all capture rows');
 assert.match(apiSource,/startColumnIndex:28,endColumnIndex:29/,'Claimed total formulas are restored across all capture rows');
 assert.match(apiSource,/startColumnIndex:29,endColumnIndex:30/,'Destination formulas are restored across all capture rows');
+assert.match(apiSource,/C\$?\{row\}<=DATE\(2026,8,31\),"Histórico en Sheets"/,'Destination formulas route dates through August 31, 2026 to the Sheets archive');
 assert.match(apiSource,/quantityDefaults=.*filter\(item=>item\.value===undefined\|\|item\.value===''\)/,'Blank quantity cells receive the default value of 1 without overwriting manual quantities');
 assert.match(apiSource,/valueRenderOption=FORMULA/,'Default quantity repair preserves existing formulas and editable values');
 assert.match(apiSource,/values:\[\[1\]\]/,'Rows return to the default quantity after successful sync cleanup');
@@ -34,6 +35,10 @@ assert.match(apiSource,/async function clearIntakeRows\(rowNumbers\)\{[\s\S]*?AM
  put('received','Sí');put('receivedOutcome','Cerrado a favor de Rematech');put('serial','SN-001');
  const received=mapSheetRecord(row,'cxsheet-2-test');assert.equal(received.receivedOnRegistration,true);assert.equal(received.receivedOutcome,'rematech');
  assert.deepEqual(routeSheetRecord(received),['Reparación','Expedientes · Devoluciones']);
+ assert.equal(HISTORICAL_CUTOFF_DATE,'2026-08-31');
+ put('date','2026-08-31');assert.deepEqual(routeSheetRecord(mapSheetRecord(row,'cxsheet-old-cutoff')),['Histórico en Sheets','No se envía a módulos activos']);
+ put('date','2026-08-30');assert.deepEqual(routeSheetRecord(mapSheetRecord(row,'cxsheet-old')),['Histórico en Sheets','No se envía a módulos activos']);
+ put('date','2026-09-01');put('received','Sí');assert.deepEqual(routeSheetRecord(mapSheetRecord(row,'cxsheet-after-cutoff')),['Reparación','Expedientes · Devoluciones']);
  put('received','No');const pendingReturn=mapSheetRecord(row,'cxsheet-2-pending');assert.deepEqual(routeSheetRecord(pendingReturn),['Devoluciones','En proceso']);
  put('type','Cambio de equipo');const pendingExchange=mapSheetRecord(row,'cxsheet-2-change');assert.deepEqual(routeSheetRecord(pendingExchange),['Devoluciones','En proceso · Pendiente de llegada y confirmación']);
  put('type','Servicio');put('received','No');put('hasPassword','Sí');put('devicePassword','Equipo-123');
