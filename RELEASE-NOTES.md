@@ -1,3 +1,9 @@
+# CX Workspace 0.10.19
+
+- Cambiar entre «Bandeja» y «Recibidos» mantiene abierto el panel de notificaciones.
+- «Marcar todo como leído» conserva compatibilidad con el servicio compartido mientras se actualiza.
+- Los errores de lectura aparecen dentro del panel sin borrar su contenido.
+
 # CX Workspace 0.10.18
 
 - Notificaciones divididas entre «Bandeja» para comentarios dirigidos y «Recibidos» para movimientos operativos.
