@@ -31,7 +31,7 @@ function createStore(directory){
  function allowed(u,module,action){return u.role==='admin'||Boolean(u.permissions?.[module]?.view&&(action==='view'||u.permissions[module].edit));}
  function authorize(module,action='view'){const u=actor();if(!allowed(u,module,action))throw Error('No tienes permiso para esta acción.');return u;}
  function admin(){const u=actor();if(u.role!=='admin')throw Error('Solo el administrador puede realizar esta acción.');return u;}
- function historicalMonth(r){const month=recordMonth(r);return data.archive?.months?.[month]?month:null;}
+ function historicalMonth(r){const month=typeof r.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)?r.date.slice(0,7):null;return month&&data.archive?.months?.[month]?month:null;}
  function assertEditableHistory(r){if(historicalMonth(r))throw Error('El expediente está cerrado y es solo de consulta en el histórico de Sheets.');}
  function protectedRecord(r,u=actor()){const copy={...r};if(u.role!=='admin'&&!u.permissions?.reparacion?.edit&&!u.permissions?.calidad?.edit)delete copy.devicePassword;return copy;}
  function log(next,u,action,id){next.audit.push({at:new Date().toISOString(),userId:u.id,action,id});}

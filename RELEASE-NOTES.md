@@ -1,3 +1,7 @@
+# CX Workspace 0.10.22
+
+- Los expedientes históricos sin fecha válida no bloquean la carga de otros registros; solo se marcan con periodos archivados reconocidos.
+
 # CX Workspace 0.10.21
 
 - Los expedientes de meses archivados en Sheets se identifican como históricos y cerrados.
