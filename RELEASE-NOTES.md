@@ -1,3 +1,8 @@
+# CX Workspace 0.10.24
+
+- Los expedientes históricos también se bloquean en el servicio, para que no puedan moverse ni modificarse.
+- La validación confirma el modo de solo lectura de los históricos.
+
 # CX Workspace 0.10.23
 
 - La app identifica como históricos los expedientes de meses anteriores, aunque la API aún no devuelva la marca histórica.

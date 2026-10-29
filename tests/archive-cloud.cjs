@@ -22,14 +22,14 @@ async function call(actor,method,input){const res=await handler(new Request('htt
 (async()=>{
  workspace.state=await createTieredState(testObjects).stage(full,new Date('2026-10-17T12:00:00Z'));
  new Function('require','createClient','Deno','testObjects',source)(require,createClient,{env:{get:key=>key==='SUPABASE_SERVICE_ROLE_KEY'?'secret':'public'},serve:fn=>handler=fn},testObjects);
- assert.equal((await call('admin','listRecords')).value.result.length,2);
+ const listed=(await call('admin','listRecords')).value.result;assert.equal(listed.length,2);assert.equal(listed.find(r=>r.id==='old').historicalMonth,'2026-09');assert.equal(listed.find(r=>r.id==='old').historicalStatus,'Cerrado · Histórico en Sheets');
  assert.equal((await call('admin','dashboardData')).value.result.records.length,2);
  assert.equal((await call('viewer','saveIdentifier',{id:'old',serial:'NEW'})).status,400);
  assert.equal(workspace.version,10);
- const changed=await call('admin','saveIdentifier',{id:'old',serial:'NEW-SERIAL'});assert.equal(changed.status,200,JSON.stringify(changed.value));
- assert.equal(workspace.state.records.length,1);assert(!workspace.state.records.some(r=>r.id==='old'));
- const restored=await createTieredState(testObjects).hydrate(workspace.state);assert.equal(restored.records.find(r=>r.id==='old').serial,'NEW-SERIAL');assert.equal(restored.records.length,2);
+ const changed=await call('admin','saveIdentifier',{id:'old',serial:'NEW-SERIAL'});assert.equal(changed.status,400,JSON.stringify(changed.value));
+ assert.equal(workspace.version,10);assert.equal(workspace.state.records.length,1);assert(!workspace.state.records.some(r=>r.id==='old'));
+ const restored=await createTieredState(testObjects).hydrate(workspace.state);assert.equal(restored.records.find(r=>r.id==='old').serial,undefined);assert.equal(restored.records.length,2);
  unavailable=true;const failed=await call('admin','dashboardData');assert.equal(failed.status,400,'History failure must not produce incomplete report totals.');
  assert.equal(workspace.version,11);
- console.log('Cloud archive: historical reads and edits, combined dashboard, permissions and unavailable-history handling passed.');
+ console.log('Cloud archive: historical reads, closed historical records, combined dashboard, permissions and unavailable-history handling passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
