@@ -1,3 +1,9 @@
+# CX Workspace 0.10.21
+
+- Los expedientes de meses archivados en Sheets se identifican como históricos y cerrados.
+- Los históricos dejan de aparecer como trabajo activo y no generan pendientes operativos.
+- Se conservan para consulta y análisis, en modo de solo lectura; no se duplican ni se alteran sus importes.
+
 # CX Workspace 0.10.20
 
 - La carga desde Sheets lee hasta la fila 999, incluidas las filas nuevas posteriores a la 101.
