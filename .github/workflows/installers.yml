@@ -14,11 +14,11 @@ jobs:
           - os: macos-15
             target: aarch64-apple-darwin
             platform: mac-arm64
-            bundles: app,dmg
+            bundles: app
           - os: macos-15-intel
             target: x86_64-apple-darwin
             platform: mac-intel
-            bundles: app,dmg
+            bundles: app
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             platform: windows-x64
@@ -45,6 +45,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: pnpm exec tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Create macOS installer disk image
+        if: startsWith(matrix.platform, 'mac-')
+        run: bash scripts/create-macos-dmg.sh ${{ matrix.target }}
       - name: Test packaged runtime
         run: node tests/packaged-runtime.cjs ${{ matrix.target }}
       - name: Collect installers

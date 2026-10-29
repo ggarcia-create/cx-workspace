@@ -1,3 +1,8 @@
+# CX Workspace 0.10.26
+
+- Se crean los instaladores macOS con un empaquetado de disco de instalación independiente.
+- Los expedientes de meses archivados en Sheets quedan fuera del trabajo activo y en consulta de solo lectura.
+
 # CX Workspace 0.10.25
 
 - La lectura fallida del histórico no altera el estado activo; los históricos cerrados se mantienen intactos.
