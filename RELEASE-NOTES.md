@@ -1,3 +1,8 @@
+# CX Workspace 0.10.23
+
+- La app identifica como históricos los expedientes de meses anteriores, aunque la API aún no devuelva la marca histórica.
+- Los históricos no aparecen como trabajo activo y quedan en modo de consulta desde la búsqueda.
+
 # CX Workspace 0.10.22
 
 - Los expedientes históricos sin fecha válida no bloquean la carga de otros registros; solo se marcan con periodos archivados reconocidos.
