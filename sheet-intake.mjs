@@ -1,7 +1,8 @@
 export const SHEET_INTAKE = {
   name: 'Carga rápida',
   firstDataRow: 2,
-  maxRows: 100,
+  // Header is row 1; intake records are available from row 2 through row 999.
+  maxRows: 998,
   columns: {
     key: 0, type: 1, date: 2, order: 3, product: 4, productUrl: 5, serial: 6,
     contact: 7, quantity: 8, price: 9, responsibleArea: 10, received: 11,

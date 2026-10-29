@@ -807,9 +807,24 @@ async function loadSheetIntakeRows(){
  return Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}));
 }
 async function sheetIntakeSelectionSignature(){
- const sheetRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${SHEET_INTAKE.firstDataRow}:AM${SHEET_INTAKE.firstDataRow+SHEET_INTAKE.maxRows-1}`);
- const response=await sheetsRequest(`/values/${sheetRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
- const data=Array.from({length:SHEET_INTAKE.maxRows},(_,i)=>({row:response.values?.[i]||[],rowNumber:SHEET_INTAKE.firstDataRow+i}))
+ const {firstDataRow,maxRows,columns}=SHEET_INTAKE,lastRow=firstDataRow+maxRows-1;
+ const checkboxRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!AM${firstDataRow}:AM${lastRow}`);
+ const selection=await sheetsRequest(`/values/${checkboxRange}?valueRenderOption=UNFORMATTED_VALUE`);
+ const selectedRowNumbers=Array.from({length:maxRows},(_,i)=>({rowNumber:firstDataRow+i,value:selection.values?.[i]?.[0]}))
+  .filter(({value})=>rowSelected([...Array(columns.selected).fill(''),value]))
+  .map(({rowNumber})=>rowNumber);
+ if(!selectedRowNumbers.length)return null;
+ let selectedRows;
+ if(selectedRowNumbers.length>100){
+  const fullRange=encodeURIComponent(`'${SHEET_INTAKE.name}'!A${firstDataRow}:AM${lastRow}`);
+  const response=await sheetsRequest(`/values/${fullRange}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
+  selectedRows=selectedRowNumbers.map(rowNumber=>({row:response.values?.[rowNumber-firstDataRow]||[],rowNumber}));
+ }else{
+  const ranges=selectedRowNumbers.map(rowNumber=>`ranges=${encodeURIComponent(`'${SHEET_INTAKE.name}'!A${rowNumber}:AM${rowNumber}`)}`).join('&');
+  const response=await sheetsRequest(`/values:batchGet?${ranges}&valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
+  selectedRows=selectedRowNumbers.map((rowNumber,index)=>({row:response.valueRanges?.[index]?.values?.[0]||[],rowNumber}));
+ }
+ const data=selectedRows
   .filter(({row})=>rowSelected(row)&&rowHasInput(row))
   .map(({row,rowNumber})=>[rowNumber,true,...row.slice(1,28),...row.slice(32,38)]);
  if(!data.length)return null;

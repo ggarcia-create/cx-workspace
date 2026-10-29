@@ -1,3 +1,8 @@
+# CX Workspace 0.10.20
+
+- La carga desde Sheets lee hasta la fila 999, incluidas las filas nuevas posteriores a la 101.
+- La detección automática consulta primero las casillas marcadas para reducir lecturas innecesarias.
+
 # CX Workspace 0.10.19
 
 - Cambiar entre «Bandeja» y «Recibidos» mantiene abierto el panel de notificaciones.
