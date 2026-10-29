@@ -1,3 +1,7 @@
+# CX Workspace 0.10.25
+
+- La lectura fallida del histórico no altera el estado activo; los históricos cerrados se mantienen intactos.
+
 # CX Workspace 0.10.24
 
 - Los expedientes históricos también se bloquean en el servicio, para que no puedan moverse ni modificarse.

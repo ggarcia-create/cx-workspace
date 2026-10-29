@@ -30,6 +30,6 @@ async function call(actor,method,input){const res=await handler(new Request('htt
  assert.equal(workspace.version,10);assert.equal(workspace.state.records.length,1);assert(!workspace.state.records.some(r=>r.id==='old'));
  const restored=await createTieredState(testObjects).hydrate(workspace.state);assert.equal(restored.records.find(r=>r.id==='old').serial,undefined);assert.equal(restored.records.length,2);
  unavailable=true;const failed=await call('admin','dashboardData');assert.equal(failed.status,400,'History failure must not produce incomplete report totals.');
- assert.equal(workspace.version,11);
+ assert.equal(workspace.version,10,'A failed historical read must not change cloud state.');
  console.log('Cloud archive: historical reads, closed historical records, combined dashboard, permissions and unavailable-history handling passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
