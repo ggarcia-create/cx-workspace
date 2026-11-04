@@ -1,3 +1,7 @@
+# CX Workspace 0.10.33
+
+- Actualiza la verificación del histórico para conservar el mes actual y el mes anterior en Supabase.
+
 # CX Workspace 0.10.32
 
 - Corrige la comprobación del periodo retenido: octubre queda activo y septiembre pasa al histórico al comenzar noviembre.

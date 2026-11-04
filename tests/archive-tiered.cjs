@@ -14,7 +14,7 @@ const row=(id,date,folio)=>({id,date,expedientNumber:folio,order:'20000182841684
  // Readers use only committed references: staged revisions never overwrite an old view.
  assert.equal((await tier.hydrate(stored)).records.find(r=>r.id==='old').repair.pending,true);
  assert.equal((await tier.hydrate(winner)).records.find(r=>r.id==='old').repair.pending,false);
- fail=true;changed.records.find(r=>r.id==='old').repair.pending='another';await assert.rejects(()=>tier.stage(changed,now),/unavailable/);assert.equal(stored.records.length,1);
+ fail=true;changed.records.find(r=>r.id==='old').repair.pending='another';await assert.rejects(()=>tier.stage(changed,now),/unavailable/);assert.equal(stored.records.length,2);
  memory.get(winner.archive.months['2026-08'].hash).records.pop();await assert.rejects(()=>tier.hydrate(winner),/integridad/);
  console.log('Tiered archive: historical edits, immutable revisions, unchanged reuse and failure isolation passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
