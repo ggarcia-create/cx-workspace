@@ -5,9 +5,9 @@ const objects={readMany:async refs=>refs.map(r=>structuredClone(memory.get(r.has
 const tier=createTieredState(objects),now=new Date('2026-10-17T12:00:00Z');
 const row=(id,date,folio)=>({id,date,expedientNumber:folio,order:'2000018284168414',module:'devoluciones',index:0,total:10000,repair:{pending:true}});
 (async()=>{
- const full={records:[row('old','2026-09-15',1),row('new','2026-10-01',2)],monthlySales:[{month:'2026-09',totals:{Shopify:10000}},{month:'2026-10',totals:{Shopify:20000}}],nextNumber:3};
- const stored=await tier.stage(full,now);assert.equal(stored.records.length,1);assert.equal(stored.monthlySales.length,1);assert.equal(writes,1);
- const hydrated=await tier.hydrate(stored);assert.equal(hydrated.records.length,2);assert.equal(hydrated.monthlySales.length,2);
+ const full={records:[row('old','2026-08-15',1),row('prior','2026-09-15',2),row('new','2026-10-01',3)],monthlySales:[{month:'2026-08',totals:{Shopify:8000}},{month:'2026-09',totals:{Shopify:10000}},{month:'2026-10',totals:{Shopify:20000}}],nextNumber:4};
+ const stored=await tier.stage(full,now);assert.equal(stored.records.length,2);assert.equal(stored.monthlySales.length,2);assert.equal(writes,1);
+ const hydrated=await tier.hydrate(stored);assert.equal(hydrated.records.length,3);assert.equal(hydrated.monthlySales.length,3);
  await tier.stage(hydrated,now);assert.equal(writes,1);
  const changed=structuredClone(hydrated);changed.records.find(r=>r.id==='old').repair.pending=false;
  const winner=await tier.stage(changed,now);assert.equal(writes,2);
@@ -15,6 +15,6 @@ const row=(id,date,folio)=>({id,date,expedientNumber:folio,order:'20000182841684
  assert.equal((await tier.hydrate(stored)).records.find(r=>r.id==='old').repair.pending,true);
  assert.equal((await tier.hydrate(winner)).records.find(r=>r.id==='old').repair.pending,false);
  fail=true;changed.records.find(r=>r.id==='old').repair.pending='another';await assert.rejects(()=>tier.stage(changed,now),/unavailable/);assert.equal(stored.records.length,1);
- memory.get(winner.archive.months['2026-09'].hash).records.pop();await assert.rejects(()=>tier.hydrate(winner),/integridad/);
+ memory.get(winner.archive.months['2026-08'].hash).records.pop();await assert.rejects(()=>tier.hydrate(winner),/integridad/);
  console.log('Tiered archive: historical edits, immutable revisions, unchanged reuse and failure isolation passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

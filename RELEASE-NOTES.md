@@ -1,3 +1,10 @@
+# CX Workspace 0.10.31
+
+- Mantiene octubre visible y editable en Devoluciones y Reparación durante noviembre.
+- Septiembre y meses anteriores se consultan por folio o pedido; sus ajustes se guardan en Sheets sin reactivar el flujo.
+- Al cambiar de mes, restaura el mes recién concluido a Supabase y conserva en Sheets los meses más antiguos.
+- Corrige los datos de referencia del archivado para reflejar el periodo de retención actualizado.
+
 # CX Workspace 0.10.30
 
 - Octubre permanece visible y operativo en Devoluciones y Reparación, con expediente editable y guardado en Supabase.
