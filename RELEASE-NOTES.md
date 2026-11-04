@@ -1,3 +1,7 @@
+# CX Workspace 0.10.34
+
+- Ajusta la referencia de consulta en Sheets para que septiembre quede histórico al iniciar noviembre.
+
 # CX Workspace 0.10.33
 
 - Actualiza la verificación del histórico para conservar el mes actual y el mes anterior en Supabase.

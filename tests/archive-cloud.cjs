@@ -20,7 +20,7 @@ const service={from(table){return {select(){if(table==='cx_profiles')return Prom
 const createClient=(_,key,options)=>key==='secret'?service:{auth:{getUser:async()=>({data:{user:{id:options.global.headers.Authorization.slice(7)}}})}};
 async function call(actor,method,input){const res=await handler(new Request('https://test.invalid',{method:'POST',headers:{Authorization:'Bearer '+actor},body:JSON.stringify({method,input,clientVersion:'0.10.9'})}));return {status:res.status,value:await res.json()};}
 (async()=>{
- workspace.state=await createTieredState(testObjects).stage(full,new Date('2026-10-17T12:00:00Z'));
+ workspace.state=await createTieredState(testObjects).stage(full,new Date('2026-11-17T12:00:00Z'));
  new Function('require','createClient','Deno','testObjects',source)(require,createClient,{env:{get:key=>key==='SUPABASE_SERVICE_ROLE_KEY'?'secret':'public'},serve:fn=>handler=fn},testObjects);
  const listed=(await call('admin','listRecords')).value.result;assert.equal(listed.length,2);assert.equal(listed.find(r=>r.id==='old').historicalMonth,'2026-09');assert.equal(listed.find(r=>r.id==='old').historicalStatus,'Cerrado · Histórico en Sheets');
  assert.equal((await call('admin','dashboardData')).value.result.records.length,2);
