@@ -1,6 +1,6 @@
 {
   "name": "cx-workspace",
-  "version": "0.10.29",
+  "version": "0.10.30",
   "description": "Customer Experience — espacio de trabajo",
   "private": true,
   "scripts": {

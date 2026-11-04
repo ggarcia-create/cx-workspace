@@ -1,5 +1,5 @@
 'use strict';
-const {digest,currentMonth,recordMonth,validateRecords}=(()=>{const a=require('./snapshot.cjs');return {...a,validateRecords:records=>a.mergeRecords(records,[])};})();
+const {digest,retainedFromMonth,recordMonth,validateRecords}=(()=>{const a=require('./snapshot.cjs');return {...a,validateRecords:records=>a.mergeRecords(records,[])};})();
 // The caller commits the returned small index with cx_commit_state. Immutable
 // objects written by a losing CAS attempt remain unreferenced, never visible.
 function createTieredState(objects){
@@ -22,7 +22,9 @@ function createTieredState(objects){
  }
  async function stage(full,now=new Date()){
   validateRecords(full.records);
-  const cutoff=currentMonth(now),next=structuredClone(full),months=new Map();
+  // Keep the current and immediately previous calendar month in Supabase.
+  // Older months are stored in Sheets and remain available through global search.
+  const cutoff=retainedFromMonth(now),next=structuredClone(full),months=new Map();
   const get=month=>{if(!months.has(month))months.set(month,{schemaVersion:1,month,records:[],monthlySales:[]});return months.get(month);};
   for(const r of full.records)if(recordMonth(r)<cutoff)get(recordMonth(r)).records.push(r);
   for(const sale of full.monthlySales||[]){if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(sale.month))throw Error('Mes de ventas inválido.');if(sale.month<cutoff)get(sale.month).monthlySales.push(sale);}

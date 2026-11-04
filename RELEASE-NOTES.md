@@ -1,3 +1,10 @@
+# CX Workspace 0.10.30
+
+- Octubre permanece visible y operativo en Devoluciones y Reparación, con expediente editable y guardado en Supabase.
+- Septiembre y meses anteriores salen de las listas activas y se consultan desde la búsqueda global por folio o pedido.
+- Los históricos permiten corregir datos generales; los expedientes de servicio también conservan edición técnica. Los cambios se guardan en Sheets y no reabren su flujo operativo.
+- Al iniciar el nuevo periodo, la primera consulta restaura el mes anterior a Supabase y mantiene en Sheets los meses más antiguos.
+
 # CX Workspace 0.10.29
 
 - Se habilita editar la información técnica de cualquier expediente histórico que permanezca en Reparación, incluidos los casos de devolución.

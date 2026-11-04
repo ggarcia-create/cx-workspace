@@ -11,6 +11,11 @@ function currentMonth(now=new Date()){
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Mexico_City',year:'numeric',month:'2-digit'}).formatToParts(now);
  return parts.find(p=>p.type==='year').value+'-'+parts.find(p=>p.type==='month').value;
 }
+function retainedFromMonth(now=new Date()){
+ const [year,month]=currentMonth(now).split('-').map(Number);
+ const date=new Date(Date.UTC(year,month-2,1));
+ return date.toISOString().slice(0,7);
+}
 function recordMonth(record){
  if(typeof record.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(record.date)||new Date(record.date+'T12:00:00Z').toISOString().slice(0,10)!==record.date)throw Error('Fecha de expediente inválida.');
  return record.date.slice(0,7);
@@ -31,7 +36,7 @@ function validateRecords(records){
 function prepareSnapshot(state,sourceVersion,now=new Date()){
  validateRecords(state.records);
  if(!Number.isSafeInteger(sourceVersion)||sourceVersion<0)throw Error('Versión de origen inválida.');
- const month=currentMonth(now),business=structuredClone(state);
+ const month=retainedFromMonth(now),business=structuredClone(state);
  // Account profiles and authentication material do not belong in an archive workbook.
  delete business.users;
  const historical=business.records.filter(r=>recordMonth(r)<month);
@@ -69,4 +74,4 @@ function decodeSnapshot(rows){
  const snapshot=JSON.parse(Buffer.from(rows.map(r=>r[1]).join(''),'base64').toString('utf8'));
  verifySnapshot(snapshot);return snapshot;
 }
-module.exports={canonical,digest,currentMonth,recordMonth,prepareSnapshot,verifySnapshot,partitionSnapshot,mergeRecords,encodeSnapshot,decodeSnapshot};
+module.exports={canonical,digest,currentMonth,retainedFromMonth,recordMonth,prepareSnapshot,verifySnapshot,partitionSnapshot,mergeRecords,encodeSnapshot,decodeSnapshot};
