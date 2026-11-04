@@ -4,8 +4,15 @@
  const reasons=['Producto no funciona o presenta daños','Arrepentimiento','Producto diferente'];
  function reason(v){const k=key(v);if(/arrep|no lo quiere/.test(k))return reasons[1];if(/diferente|no corresponde/.test(k))return reasons[2];if(/no funcion|no enciende|falla funcional|danad|producto dano|roto/.test(k))return reasons[0];return clean(v)||'Sin motivo informado';}
  const sale=r=>Number.isSafeInteger(r.orderTotal)?r.orderTotal:(Number(r.quantity)||0)*(Number(r.price)||0);
- const executed=r=>r.type===3||r.closure?.outcome==='buyer'||(r.module==='devoluciones'&&r.index===0&&r.resolution==='En proceso de devolución');
- const executedAmount=r=>r.type===3?(Number(r.refund)||0):sale(r);
+ function executed(r){
+  const status=key(r.resolution);
+  if(r.type===3||/reembolso parcial/.test(status))return true;
+  if(/cerrado con reembolso al comprador/.test(status))return true;
+  if(/cerrado a favor de rematech|reparacion|cambio de equipo|archivado|pendiente de validacion/.test(status))return false;
+  if(r.closure)return r.closure.outcome==='buyer';
+  return r.module==='devoluciones'&&r.index===0&&r.type===0&&status==='en proceso de devolucion';
+ }
+ const executedAmount=r=>r.type===3||/reembolso parcial/.test(key(r.resolution))?(Number(r.refund)||0):sale(r);
  function faults(r){return [r,...(r.additionalFaults||[])].map(f=>({reason:reason(f.reason),component:clean(f.component),specifics:[...new Set((Array.isArray(f.specificReasons)&&f.specificReasons.length?f.specificReasons:[f.specificReason]).map(clean).filter(Boolean))]}));}
  function groups(rows,values){const map=new Map();for(const r of rows){const unique=new Map(values(r).map(v=>[key(v),clean(v)||'Sin información']));for(const [k,label] of unique){if(!map.has(k))map.set(k,{label,count:0,total:0});const item=map.get(k);item.count++;item.total+=sale(r);}}return [...map.values()].sort((a,b)=>b.count-a.count||b.total-a.total||a.label.localeCompare(b.label));}
  function drilldown(rows,selectedReason='',component=''){

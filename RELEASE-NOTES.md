@@ -1,3 +1,8 @@
+# CX Workspace 0.10.27
+
+- La búsqueda global encuentra expedientes históricos por pedido, serie o barcode y abre su ficha técnica en Reparación.
+- Reparación puede actualizar la información técnica de expedientes históricos; los cambios se guardan en Sheets y el expediente permanece en el histórico, sin enviarse a módulos activos.
+
 # CX Workspace 0.10.26
 
 - Se crean los instaladores macOS con un empaquetado de disco de instalación independiente.

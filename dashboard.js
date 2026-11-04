@@ -11,7 +11,7 @@ function channelChart(items,total){
 }
 const originalSale=r=>Number.isSafeInteger(r.orderTotal)?r.orderTotal:r.quantity*r.price;
 const isExecuted=r=>claimAnalytics.executed(r);
-const executedAmount=r=>r.type===3?r.refund:originalSale(r);
+const executedAmount=r=>claimAnalytics.executedAmount(r);
 const percent=(amount,total)=>total>0?amount/total*100:null;
 const pct=value=>value===null?'—':value.toLocaleString('es-MX',{maximumFractionDigits:2})+' %';
 function dashboardGroups(rows,key){return Object.entries(rows.reduce((m,r)=>{const k=key(r);(m[k]??=[]).push(r);return m;},{})).map(([label,list])=>({label,count:list.length,total:list.reduce((s,r)=>s+originalSale(r),0)})).sort((a,b)=>b.total-a.total);}
@@ -65,7 +65,7 @@ async function showReportEmail(filter){
  });
 }
 function drawDashboard(){
- const scroll=document.querySelector('.workspace').scrollTop,f=dashboardFilter,rows=dashboardSnapshot.records.filter(r=>r.date>=f.from&&r.date<=f.to&&(!f.channel||r.contact===f.channel)),claims=rows.reduce((s,r)=>s+originalSale(r),0),executed=rows.filter(isExecuted),totalExecuted=executed.reduce((s,r)=>s+executedAmount(r),0),sales=dashboardSales(f.from,f.to,f.channel),channels=dashboardGroups(rows,r=>r.contact),drill=claimAnalytics.drilldown(rows,f.reason,f.component);
+ const scroll=document.querySelector('.workspace').scrollTop,f=dashboardFilter,uniqueRows=[...new Map(dashboardSnapshot.records.map((r,i)=>[r.id||`row-${i}`,r])).values()],rows=uniqueRows.filter(r=>r.date>=f.from&&r.date<=f.to&&(!f.channel||r.contact===f.channel)),claims=rows.reduce((s,r)=>s+originalSale(r),0),executed=rows.filter(isExecuted),totalExecuted=executed.reduce((s,r)=>s+executedAmount(r),0),sales=dashboardSales(f.from,f.to,f.channel),channels=dashboardGroups(rows,r=>r.contact),drill=claimAnalytics.drilldown(rows,f.reason,f.component);
  if(f.reason&&!drill.reasons.some(r=>r.label===f.reason)){f.reason='';f.component='';return drawDashboard();}if(f.component&&!drill.components.some(c=>c.label===f.component)){f.component='';return drawDashboard();}
  const kpis=[['Total ventas',sales.available?'$ '+money(sales.total):'—','Ventas de los meses seleccionados'],['Total de reclamos','$ '+money(claims),rows.length+' expedientes · importe de venta'],['Reclamos ejecutados','$ '+money(totalExecuted),executed.length+' expedientes'],['% de reclamos',sales.available?pct(percent(claims,sales.total)):'—','Reclamos / ventas'],['% reclamos ejecutados',sales.available?pct(percent(totalExecuted,sales.total)):'—','Reclamos ejecutados / ventas']];
  const functional=f.reason===claimAnalytics.reasons[0],top=drill.components[0];
