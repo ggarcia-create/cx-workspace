@@ -1,3 +1,8 @@
+# CX Workspace 0.10.29
+
+- Se habilita editar la información técnica de cualquier expediente histórico que permanezca en Reparación, incluidos los casos de devolución.
+- Los cambios se guardan en el histórico de Sheets; el expediente sigue cerrado y fuera de los módulos activos.
+
 # CX Workspace 0.10.28
 
 - Se corrige la referencia al módulo auxiliar de carga desde Sheets para la publicación del servicio.
