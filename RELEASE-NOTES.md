@@ -1,3 +1,7 @@
+# CX Workspace 0.10.32
+
+- Corrige la comprobación del periodo retenido: octubre queda activo y septiembre pasa al histórico al comenzar noviembre.
+
 # CX Workspace 0.10.31
 
 - Mantiene octubre visible y editable en Devoluciones y Reparación durante noviembre.

@@ -4,7 +4,7 @@ const archive=require('../archive/snapshot.cjs');
 const record=(id,date,folio)=>({id,date,expedientNumber:folio,order:'2000018284168414',module:'reparacion',index:0,price:479340,total:479340,repair:{notes:'Pendiente de diagnóstico'},additionalFaults:[{component:'Batería',specificReasons:['Hinchada','No retiene carga']}],futureField:{preserve:true}});
 const state={records:[record('old','2026-08-31',1),record('current','2026-09-01',2)],users:[{passwordHash:'never export'}],monthlySales:[{month:'2026-08',total:123456}],audit:[{action:'repair-update'}],nextNumber:3};
 const snapshot=archive.prepareSnapshot(state,42,new Date('2026-10-01T06:01:00Z'));
-assert.equal(snapshot.manifest.currentMonth,'2026-10');
+assert.equal(snapshot.manifest.currentMonth,'2026-09');
 assert.equal(archive.currentMonth(new Date('2026-10-01T05:59:00Z')),'2026-09');
 assert.equal(snapshot.manifest.historical,1);assert.equal(snapshot.business.users,undefined);
 assert.deepEqual(archive.decodeSnapshot(archive.encodeSnapshot(snapshot)),snapshot);
