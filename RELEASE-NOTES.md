@@ -1,5 +1,6 @@
-# CX Workspace 0.10.27
+# CX Workspace 0.10.28
 
+- Se corrige la referencia al módulo auxiliar de carga desde Sheets para la publicación del servicio.
 - La búsqueda global encuentra expedientes históricos por pedido, serie o barcode y abre su ficha técnica en Reparación.
 - Reparación puede actualizar la información técnica de expedientes históricos; los cambios se guardan en Sheets y el expediente permanece en el histórico, sin enviarse a módulos activos.
 
