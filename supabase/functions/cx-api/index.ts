@@ -679,7 +679,9 @@ function createTieredState(objects){
  }
  async function stage(full,now=new Date()){
   validateRecords(full.records);
-  const cutoff=currentMonth(now),next=structuredClone(full),months=new Map();
+  // Keep the current month and the immediately previous month active. Older
+  // periods remain in Sheets and are served through historical lookup.
+  const cutoff=archiveRetentionMonth(now),next=structuredClone(full),months=new Map();
   const get=month=>{if(!months.has(month))months.set(month,{schemaVersion:1,month,records:[],monthlySales:[]});return months.get(month);};
   for(const r of full.records)if(recordMonth(r)<cutoff)get(recordMonth(r)).records.push(r);
   for(const sale of full.monthlySales||[]){if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(sale.month))throw Error('Mes de ventas inválido.');if(sale.month<cutoff)get(sale.month).monthlySales.push(sale);}
