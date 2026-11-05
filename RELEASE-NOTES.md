@@ -1,3 +1,8 @@
+# CX Workspace 0.10.35
+
+- El total ejecutado conserva los reembolsos al comprador aunque el equipo pase después a Reparación o quede archivado.
+- Incluye en el cálculo los expedientes de octubre que ya tenían un cierre con reembolso al comprador.
+
 # CX Workspace 0.10.34
 
 - Ajusta la referencia de consulta en Sheets para que septiembre quede histórico al iniciar noviembre.

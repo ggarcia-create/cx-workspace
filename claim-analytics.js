@@ -7,9 +7,10 @@
  function executed(r){
   const status=key(r.resolution);
   if(r.type===3||/reembolso parcial/.test(status))return true;
+  // A buyer refund remains executed after the recovered equipment moves to repair.
+  if(r.closure)return r.closure.outcome==='buyer';
   if(/cerrado con reembolso al comprador/.test(status))return true;
   if(/cerrado a favor de rematech|reparacion|cambio de equipo|archivado|pendiente de validacion/.test(status))return false;
-  if(r.closure)return r.closure.outcome==='buyer';
   return r.module==='devoluciones'&&r.index===0&&r.type===0&&status==='en proceso de devolucion';
  }
  const executedAmount=r=>r.type===3||/reembolso parcial/.test(key(r.resolution))?(Number(r.refund)||0):sale(r);

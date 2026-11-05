@@ -1,6 +1,6 @@
 [package]
 name = "cx-workspace"
-version = "0.10.34"
+version = "0.10.35"
 edition = "2021"
 
 [build-dependencies]
