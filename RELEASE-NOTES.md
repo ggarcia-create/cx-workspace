@@ -1,3 +1,10 @@
+# CX Workspace 0.10.37
+
+- Reorganiza el dashboard en tarjetas de gráficas con el mismo espaciado, escala y leyendas legibles.
+- Acomoda las gráficas de motivos en una cuadrícula equilibrada y evita que sus etiquetas se amontonen.
+- Mueve “Análisis por equipo y lote” debajo de “Reclamos por área responsable”.
+- Mantiene los colores de categorías consistentes entre las gráficas y los rankings.
+
 # CX Workspace 0.10.36
 
 - Reorganiza el dashboard con indicadores agrupados para ventas, reclamos, ejecución y mitigación, con tasas visibles junto a sus importes.
