@@ -1,3 +1,10 @@
+# CX Workspace 0.10.36
+
+- Reorganiza el dashboard con indicadores agrupados para ventas, reclamos, ejecución y mitigación, con tasas visibles junto a sus importes.
+- Añade rankings interactivos de equipos con más devoluciones, equipos con más fallas y lotes con más reclamos identificados por barcode.
+- Al seleccionar un modelo o lote se muestran sus expedientes y el desglose de fallas sin duplicar reclamos.
+- Usa colores diferenciados y armonizados para distinguir las métricas y gráficas.
+
 # CX Workspace 0.10.35
 
 - El total ejecutado conserva los reembolsos al comprador aunque el equipo pase después a Reparación o quede archivado.
